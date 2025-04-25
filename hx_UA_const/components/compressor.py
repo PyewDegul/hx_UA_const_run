@@ -1,8 +1,8 @@
 from ..core.sim_cycle import SimCycle
-from ..core.params import SystemParams
+from ..core.params import SystemParams, SystemParams_DSH_charge
 
 class Compressor:
-    def __init__(self, sim: SimCycle, params: SystemParams):
+    def __init__(self, sim: SimCycle, params: SystemParams_DSH_charge):
         self.sim = sim
         self.p = params
 
