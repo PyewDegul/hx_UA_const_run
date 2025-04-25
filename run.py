@@ -15,9 +15,11 @@ params1 = SystemParams(
 model1 = CycleModel(params1, "REFPROP","R32")
 
 cProfile.run('model1.run()')  # Profiling the run method
-results = model1.run()
+# results = model1.run()
 
-print(results)
+# print(results)
+'''
+
 '''
 # DSH, Charge to Pressure Solver
 params2 = SystemParams_DSH_charge(
@@ -34,3 +36,4 @@ cProfile.run('model2.run()')  # Profiling the run method
 results = model2.run()
 
 print(results)
+'''
