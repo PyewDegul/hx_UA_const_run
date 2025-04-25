@@ -1,9 +1,10 @@
 # cycle/cycle_model.py
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams
-
 from hx_UA_const.components.compressor import Compressor
-from hx_UA_const.components.heat_exchanger import Condenser, Evaporator, Condenser_charge, Evaporator_charge
+from hx_UA_const.components.heat_exchanger import Condenser, Evaporator
+from hx_UA_const.components.connector import Connector
+
 from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator, DSCCalculator
 from hx_UA_const.solvers.dsh_dsc_to_pressure_solver import PressureSolver
 
@@ -32,9 +33,7 @@ class CycleModel:
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams_DSH_charge
 
-from hx_UA_const.components.compressor import Compressor
-from hx_UA_const.components.heat_exchanger import Condenser_charge, Evaporator_charge
-from hx_UA_const.components.connector import Connector
+
 from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator
 from hx_UA_const.metrics.charge_cal import ChargeCalculator
 from hx_UA_const.solvers.dsh_charge_to_pressure_solver import PressureSolver_charge
@@ -44,10 +43,10 @@ class CycleModel_charge:
         self.params = params
         sim = SimCycle(backend, fluid)
         self.comp = Compressor(sim, params)
-        self.cond = Condenser_charge(sim, params.N_cond,
+        self.cond = Condenser(sim, params.N_cond,
                               params.UA_cond / params.N_cond,
                               params.T_cond_air, params.V_elem_cond)
-        self.eva = Evaporator_charge(sim, params.N_eva,
+        self.eva = Evaporator(sim, params.N_eva,
                               params.UA_eva / params.N_eva,
                               params.T_eva_air, params.V_elem_eva)
         self.conn = Connector(sim, params)
