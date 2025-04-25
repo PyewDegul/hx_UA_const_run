@@ -46,8 +46,8 @@ class PressureSolver_charge:
         # bisect or brentq or toms748
         
         P_eva_low = self.sim.get_single('QT_inputs', 1, T_eva_air - 20, ('P'))
-        P_eva_high = self.sim.get_single('QT_inputs', 1, T_eva_air + 20, ('P'))
-        P_eva_sol = opt.bisect(cycle_dsh, P_eva_low, P_eva_high, xtol=self.tol)
+        P_eva_high = self.sim.get_single('QT_inputs', 1, T_eva_air, ('P'))
+        P_eva_sol = opt.brentq(cycle_dsh, P_eva_low, P_eva_high, xtol=self.tol)
 
         mdot, h_comp_out = self.comp.process(P_eva_sol, P_cond)
         h_cond_out, T_cond_out, m_cond = self.cond.exchange(mdot, P_cond, h_comp_out)
@@ -60,15 +60,15 @@ class PressureSolver_charge:
             P_eva_sol, h_comp_out, h_cond_out, T_cond_out, m_cond, h_eva_out, T_eva_out, m_eva, mdot = self.solve_evap(P_cond, T_eva_air)
             m_conn = self.conn.process(P_eva_sol, h_cond_out, h_eva_out)
             mtot = m_cond + m_eva + m_conn
-            print(mtot)
             return self.charge.error(mtot)
         
         # bisect or brentq or toms748
         P_cond_low = self.sim.get_single('QT_inputs', 0, T_cond_air, ('P'))
         P_cond_high = self.sim.get_single('QT_inputs', 0, T_cond_air + 30, ('P'))
+
         # print(cycle_charge(P_cond_low), cycle_charge(P_cond_high))
         
-        P_cond_sol = opt.bisect(cycle_charge, P_cond_low, P_cond_high, xtol=self.tol)
+        P_cond_sol = opt.brentq(cycle_charge, P_cond_low, P_cond_high, xtol=self.tol)
 
         P_eva_sol, h_comp_out, h_cond_out, T_cond_out, m_cond, h_eva_out, T_eva_out, m_eva, mdot = self.solve_evap(P_cond_sol, T_eva_air)
         

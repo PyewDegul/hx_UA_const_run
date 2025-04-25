@@ -20,7 +20,7 @@ class HeatExchanger:
         for i in range(self.N):
             # Element에서 온도, 건도, 비열 계산
             T_elem[i], q_elem[i] = self.sim.get_multiple('HP_inputs', h_elem[i], P, ('T', 'Q'))
-
+            
             # 건도에 따른 열전달량 계산
             T_delta = abs(T_elem[i] - self.T_air)
             if 0 < q_elem[i] < 1:
@@ -52,7 +52,7 @@ class HeatExchanger_charge:
         self.UA = UA_elem
         self.V_elem = V_elem
         self.T_air = T_air
-        print(self.UA)
+        
 
     def _elementwise(self, mdot: float, P: float, h_in: float, mode: str):
         h_elem = np.empty(self.N + 1)
@@ -88,7 +88,7 @@ class HeatExchanger_charge:
         m_tot = np.sum(m_elem)
         h_out = h_elem[-1]
         T_out = self.sim.get_single('HP_inputs', h_out, P, ('T'))
-
+      
         return h_out, T_out, m_tot
 
 
