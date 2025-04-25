@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.env/
+*.egg-info/
+
+# VSCode
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MacOS
+.DS_Store
