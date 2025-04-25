@@ -12,13 +12,7 @@ params = SystemParams(
 )
 model = CycleModel(params, "REFPROP","R32")
 
-with cProfile.Profile() as pr:
-    # Run the model with the given parameters
-    model.run()
-stats = pstats.Stats(pr)
-stats.sort_stats('cumtime').print_stats(30)
+cProfile.run('model.run()')  # Profiling the run method
+results = model.run()
 
-# cProfile.run('model.run()')  # Profiling the run method
-# results = model.run()
-
-# print(results)
+print(results)
