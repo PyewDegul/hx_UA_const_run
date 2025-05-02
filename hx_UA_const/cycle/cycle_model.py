@@ -2,6 +2,7 @@
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams
 from hx_UA_const.components.compressor import Compressor
+from hx_UA_const.components.expansion_valve import ExpansionValve
 from hx_UA_const.components.heat_exchanger import Condenser, Evaporator
 from hx_UA_const.components.connector import Connector
 
@@ -16,12 +17,13 @@ class CycleModel:
         self.cond = Condenser(sim, params.N_cond,
                               params.UA_cond / params.N_cond,
                               params.T_cond_air)
+        self.exp = ExpansionValve(sim, params)
         self.eva = Evaporator(sim, params.N_eva,
                               params.UA_eva / params.N_eva,
                               params.T_eva_air)
         self.dsh = DSHCalculator(sim, params.DSH_target)
         self.dsc = DSCCalculator(sim, params.DSC_target)
-        self.solver = PressureSolver(sim, self.comp, self.cond,
+        self.solver = PressureSolver(sim, self.comp, self.cond, self.exp,
                                      self.eva, self.dsh,
                                      self.dsc, params.tol)
 
@@ -45,13 +47,14 @@ class CycleModel_charge:
         self.cond = Condenser(sim, params.N_cond,
                               params.UA_cond / params.N_cond,
                               params.T_cond_air, params.V_elem_cond)
+        self.exp = ExpansionValve(sim, params)
         self.eva = Evaporator(sim, params.N_eva,
                               params.UA_eva / params.N_eva,
                               params.T_eva_air, params.V_elem_eva)
         self.conn = Connector(sim, params)
         self.dsh = DSHCalculator(sim, params.DSH_target)
         self.charge = ChargeCalculator(sim, params.charge_target)
-        self.solver = PressureSolver_charge(sim, self.comp, self.cond,
+        self.solver = PressureSolver_charge(sim, self.comp, self.cond, self.exp,
                                      self.eva, self.conn, self.dsh,
                                      self.charge, params.tol)
 

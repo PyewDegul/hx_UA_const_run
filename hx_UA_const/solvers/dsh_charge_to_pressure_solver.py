@@ -6,13 +6,15 @@ class PressureSolver_charge:
                  sim:SimCycle,
                  compressor,
                  condenser,
+                 expansion_valve,
                  evaporator,
                  connector,
                  dsh_calc,
                  charge_calc,
                  tol: float):
         self.comp = compressor
-        self.cond = condenser
+        self.cond = condenser,
+        self.exp = expansion_valve
         self.eva = evaporator
         self.conn = connector
         self.dsh = dsh_calc
@@ -24,6 +26,8 @@ class PressureSolver_charge:
         def cycle_dsh(P_eva):
             h_comp_out, s_comp_out, T_comp_out, mdot = self.comp.process(P_eva, P_cond)
             h_cond_out, s_cond_out, T_cond_out, m_cond = self.cond.exchange(mdot, P_cond, h_comp_out)
+            h_exp_out, s_exp_out, T_exp_out = self.exp.process(P_eva, P_cond, h_cond_out)
+            # h_exp_out, s_exp_out, T_exp_out , mdot= self.comp.process(P_eva, P_cond, h_cond_out)
             h_eva_out, s_eva_out, T_eva_out, m_eva = self.eva.exchange(mdot, P_eva, h_cond_out)
             
             return self.dsh.error(T_eva_out, P_eva)
@@ -36,13 +40,15 @@ class PressureSolver_charge:
 
         h_comp_out, s_comp_out, T_comp_out, mdot = self.comp.process(P_eva_sol, P_cond)
         h_cond_out, s_cond_out, T_cond_out, m_cond = self.cond.exchange(mdot, P_cond, h_comp_out)
+        h_exp_out, s_exp_out, T_exp_out = self.exp.process(P_eva_sol, P_cond, h_cond_out)
+        # h_exp_out, s_exp_out, T_exp_out , mdot= self.comp.process(P_eva, P_cond, h_cond_out)
         h_eva_out, s_eva_out, T_eva_out, m_eva = self.eva.exchange(mdot, P_eva_sol, h_cond_out)
 
-        return P_eva_sol, h_comp_out, s_comp_out, T_comp_out, h_cond_out, s_cond_out, T_cond_out, h_eva_out, s_eva_out, T_eva_out, m_cond, m_eva, mdot
+        return P_eva_sol, h_comp_out, s_comp_out, T_comp_out, h_cond_out, s_cond_out, T_cond_out, h_exp_out, s_exp_out, T_exp_out, h_eva_out, s_eva_out, T_eva_out, m_cond, m_eva, mdot
         
     def solve_cond(self, T_cond_air: float, T_eva_air: float):
         def cycle_charge(P_cond):
-            P_eva_sol, h_comp_out, s_comp_out, T_comp_out, h_cond_out, s_cond_out, T_cond_out, h_eva_out, s_eva_out, T_eva_out, m_cond, m_eva, mdot = self.solve_evap(P_cond, T_eva_air)
+            P_eva_sol, h_comp_out, s_comp_out, T_comp_out, h_cond_out, s_cond_out, T_cond_out, h_exp_out, s_exp_out, T_exp_out, h_eva_out, s_eva_out, T_eva_out, m_cond, m_eva, mdot  = self.solve_evap(P_cond, T_eva_air)
             m_conn = self.conn.process(P_eva_sol, h_cond_out, h_eva_out)
             mtot = m_cond + m_eva + m_conn
             return self.charge.error(mtot)

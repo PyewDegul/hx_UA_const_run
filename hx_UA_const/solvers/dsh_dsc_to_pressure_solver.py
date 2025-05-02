@@ -6,12 +6,14 @@ class PressureSolver:
                  sim:SimCycle,
                  compressor,
                  condenser,
+                 expansion_valve,
                  evaporator,
                  dsh_calc,
                  dsc_calc,
                  tol: float):
         self.comp = compressor
         self.cond = condenser
+        self.exp = expansion_valve
         self.eva = evaporator
         self.dsh = dsh_calc
         self.dsc = dsc_calc
@@ -22,9 +24,9 @@ class PressureSolver:
         def cycle_dsh(P_eva):
             h_comp_out, s_comp_out, T_comp_out, mdot = self.comp.process(P_eva, P_cond)
             h_cond_out, s_cond_out, T_cond_out = self.cond.exchange(mdot, P_cond, h_comp_out)
-            h_exp_out, s_exp_out, T_exp_out = self.comp.process(P_eva, P_cond, h_cond_out)
+            h_exp_out, s_exp_out, T_exp_out = self.exp.process(P_eva, P_cond, h_cond_out)
             # h_exp_out, s_exp_out, T_exp_out , mdot= self.comp.process(P_eva, P_cond, h_cond_out)
-            h_eva_out, s_eva_out, T_eva_out = self.eva.exchange(mdot, P_eva, h_cond_out)
+            h_eva_out, s_eva_out, T_eva_out = self.eva.exchange(mdot, P_eva, h_exp_out)
             return self.dsh.error(T_eva_out, P_eva)
         
         # bisect or brentq or toms748
