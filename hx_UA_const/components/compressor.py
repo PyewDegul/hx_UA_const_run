@@ -16,4 +16,5 @@ class Compressor:
         h_comp_out_iso = self.sim.get_single('PS_inputs', P_cond, s_comp_in, ('H'))
         h_comp_out = h_comp_in + (h_comp_out_iso - h_comp_in) / self.p.isen_eff
 
-        return mdot, h_comp_out
+        s_comp_out, T_comp_out = self.sim.get_multiple('HP_inputs', h_comp_out, P_cond, ('S', 'T'))
+        return h_comp_out, s_comp_out, T_comp_out, mdot

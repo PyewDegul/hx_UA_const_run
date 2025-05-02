@@ -8,7 +8,6 @@ from hx_UA_const.components.connector import Connector
 from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator, DSCCalculator
 from hx_UA_const.solvers.dsh_dsc_to_pressure_solver import PressureSolver
 
-
 class CycleModel:
     def __init__(self, params: SystemParams, backend: str, fluid: str):
         self.params = params
