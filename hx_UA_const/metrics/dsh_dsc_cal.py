@@ -12,6 +12,7 @@ class DSHCalculator:
         
         return (DSH_cal - self.target) / self.target    
 
+
 class DSCCalculator:
     def __init__(self, sim_cycle: SimCycle, target: float):
         self.sim = sim_cycle

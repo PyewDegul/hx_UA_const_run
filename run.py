@@ -1,6 +1,7 @@
 # run.py
 from hx_UA_const.cycle.cycle_model import CycleModel, CycleModel_charge
-from hx_UA_const.core.params import SystemParams, SystemParams_DSH_charge # 예시 경로, 실제 구조에 따라 조정
+from hx_UA_const.core.params import SystemParams, SystemParams_DSH_charge, SystemParams_mdot_DSH_charge # 예시 경로, 실제 구조에 따라 조정
+
 import cProfile
 import pstats
 
@@ -32,3 +33,13 @@ model2 = CycleModel_charge(params2, "REFPROP","R410a")
 results = model2.run()
 
 print(results)
+
+
+# mdot, DSH, Charge to Pressure Solver(DSH 고정 X)
+params3 = SystemParams_mdot_DSH_charge(
+    U_cond=1000, U_eva=1000, N_cond=40, N_eva=40,
+    D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+    T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+    isen_eff = 0.7, V_comp =2e-5, f_comp=50, CA=8e-7,
+    DSH_target=5, charge_target=0.6, tol=0.01
+)

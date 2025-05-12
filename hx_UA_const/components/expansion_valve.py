@@ -10,9 +10,8 @@ class ExpansionValve:
         h_exp_out = h_exp_in
         s_exp_out, T_exp_out = self.sim.get_multiple('HP_inputs', h_exp_out, P_eva, ('S', 'T'))
 
-        # CA = C * self.p['A_eev']
-        # CA = 1.0
+        CA = self.p.CA
         # Calculate the mass flow rate(Orifice area)
-        # mdot = CA * (2 * rho_exp_in * (P_cond - P_eva)) ** 0.5
+        mdot = CA * (2 * rho_exp_in * (P_cond - P_eva)) ** 0.5
         
-        return h_exp_out, s_exp_out, T_exp_out, # mdot
+        return h_exp_out, s_exp_out, T_exp_out, mdot
