@@ -1,101 +1,44 @@
 # cycle/cycle_model.py
+'''1. DSH, DSC to Pressure Solver(2-loop)'''
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams
-from hx_UA_const.components.compressor import Compressor
-from hx_UA_const.components.expansion_valve import ExpansionValve
-from hx_UA_const.components.heat_exchanger import Condenser, Evaporator
-from hx_UA_const.components.connector import Connector
-
-from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator, DSCCalculator
 from hx_UA_const.solvers.dsh_dsc_to_pressure_solver import PressureSolver
 
 class CycleModel:
     def __init__(self, params: SystemParams, backend: str, fluid: str):
-        self.params = params
         sim = SimCycle(backend, fluid)
-        self.comp = Compressor(sim, params)
-        self.cond = Condenser(sim, params.N_cond,
-                              params.UA_cond / params.N_cond,
-                              params.T_cond_air)
-        self.exp = ExpansionValve(sim, params)
-        self.eva = Evaporator(sim, params.N_eva,
-                              params.UA_eva / params.N_eva,
-                              params.T_eva_air)
-        self.dsh = DSHCalculator(sim, params.DSH_target)
-        self.dsc = DSCCalculator(sim, params.DSC_target)
-        self.solver = PressureSolver(sim, self.comp, self.cond, self.exp,
-                                     self.eva, self.dsh,
-                                     self.dsc, params.tol)
+        self.params = params
+        self.solver = PressureSolver(sim, self.params)
 
     def run(self):
         P_cond, P_eva = self.solver.solve_cond(self.params.T_cond_air, self.params.T_eva_air)
         return {'P_cond [MPa]': P_cond / 1e6 , 'P_eva [MPa]': P_eva / 1e6}       
-    
+'''2. DSH, Charge to Pressure Solver(2-loop)'''
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams_DSH_charge
-
-from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator
-from hx_UA_const.metrics.charge_cal import ChargeCalculator
 from hx_UA_const.solvers.dsh_charge_to_pressure_solver import PressureSolver_charge
 
 class CycleModel_charge:
     def __init__(self, params: SystemParams_DSH_charge, backend: str, fluid: str):
-        self.params = params
         sim = SimCycle(backend, fluid)
-        self.comp = Compressor(sim, params)
-        self.cond = Condenser(sim, params.N_cond,
-                              params.UA_cond / params.N_cond,
-                              params.T_cond_air, params.V_elem_cond)
-        self.exp = ExpansionValve(sim, params)
-        self.eva = Evaporator(sim, params.N_eva,
-                              params.UA_eva / params.N_eva,
-                              params.T_eva_air, params.V_elem_eva)
-        self.conn = Connector(sim, params)
-        self.dsh = DSHCalculator(sim, params.DSH_target)
-        self.charge = ChargeCalculator(sim, params.charge_target)
-        self.solver = PressureSolver_charge(sim, self.comp, self.cond, self.exp,
-                                     self.eva, self.conn, self.dsh,
-                                     self.charge, params.tol)
+        self.params = params
+        self.solver = PressureSolver_charge(sim, self.params)
 
     def run(self):
         P_cond, P_eva = self.solver.solve_cond(self.params.T_cond_air, self.params.T_eva_air)
         return {'P_cond [MPa]': P_cond / 1e6 , 'P_eva [MPa]': P_eva / 1e6} 
     
-
+'''3. mdot, DSH, Charge to Pressure Solver(3-loop)'''
 from hx_UA_const.core.sim_cycle import SimCycle
 from hx_UA_const.core.params import SystemParams_mdot_DSH_charge
-
-from hx_UA_const.metrics.dsh_dsc_cal import DSH_assm_Calculator
-from hx_UA_const.metrics.charge_cal import ChargeCalculator
-from hx_UA_const.metrics.mdot_cal import mdotCalculator
-
-from hx_UA_const.solvers.mdot_dsh_charge_to_pressure_solver import PressureSolver_mdot_charge
+from hx_UA_const.solvers.mdot_dsh_charge_to_pressure_solver import PressureSolver_mdot_DSH_charge
 
 class CycleModel_mdot_charge:
     def __init__(self, params: SystemParams_mdot_DSH_charge, backend: str, fluid: str):
         self.params = params
         sim = SimCycle(backend, fluid)
-
-        self.comp = Compressor(sim, params)
-        self.cond = Condenser(sim, params.N_cond,
-                              params.UA_cond / params.N_cond,
-                              params.T_cond_air, params.V_elem_cond)
-        self.exp = ExpansionValve(sim, params)
-
-
-        self.exp = ExpansionValve(sim, params)
-        self.eva = Evaporator(sim, params.N_eva,
-                              params.UA_eva / params.N_eva,
-                              params.T_eva_air, params.V_elem_eva)
-        self.conn = Connector(sim, params)
-        self.dsh = DSHCalculator(sim, params.DSH_target)
-        self.charge = ChargeCalculator(sim, params.charge_target)
-        self.Mdot = mdotCalculator(sim)
-
-        self.solver = PressureSolver_charge(sim, self.comp, self.cond, self.exp,
-                                     self.eva, self.conn, self.dsh,
-                                     self.charge, self.Mdot, params.tol)
+        self.solver = PressureSolver_mdot_DSH_charge(sim, self.params)
 
     def run(self):
-        P_cond, P_eva = self.solver.solve_cond(self.params.T_cond_air, self.params.T_eva_air)
-        return {'P_cond [MPa]': P_cond / 1e6 , 'P_eva [MPa]': P_eva / 1e6} 
+        P_cond, P_eva, DSH = self.solver.solve_charge(self.params.T_cond_air, self.params.T_eva_air)
+        return {'P_cond [MPa]': P_cond / 1e6 , 'P_eva [MPa]': P_eva / 1e6, 'DSH [K]': DSH} 

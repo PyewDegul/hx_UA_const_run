@@ -1,23 +1,32 @@
 import scipy.optimize as opt
 from ..core.sim_cycle import SimCycle
 
+from hx_UA_const.components.compressor import Compressor
+from hx_UA_const.components.expansion_valve import ExpansionValve
+from hx_UA_const.components.heat_exchanger import Condenser, Evaporator
+
+from hx_UA_const.metrics.dsh_dsc_cal import DSHCalculator, DSCCalculator
+
 class PressureSolver:
     def __init__(self,
                  sim:SimCycle,
-                 compressor,
-                 condenser,
-                 expansion_valve,
-                 evaporator,
-                 dsh_calc,
-                 dsc_calc,
-                 tol: float):
-        self.comp = compressor
-        self.cond = condenser
-        self.exp = expansion_valve
-        self.eva = evaporator
-        self.dsh = dsh_calc
-        self.dsc = dsc_calc
-        self.tol = tol
+                 params
+                 ):
+        self.sim = sim
+        self.params = params
+
+        self.comp = Compressor(sim, self.params)
+        self.cond = Condenser(sim, self.params.N_cond,
+                              self.params.UA_cond / self.params.N_cond,
+                              self.params.T_cond_air)
+        self.exp = ExpansionValve(sim, self.params)
+        self.eva = Evaporator(sim, self.params.N_eva,
+                              self.params.UA_eva / self.params.N_eva,
+                              self.params.T_eva_air)
+        self.dsh = DSHCalculator(sim, self.params.DSH_target)
+        self.dsc = DSCCalculator(sim, self.params.DSC_target)
+
+        self.tol = self.params.tol
         self.sim = sim
 
     def solve_evap(self, P_cond: float, T_eva_air: float):

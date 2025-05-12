@@ -41,15 +41,18 @@ class HeatExchanger:
             # get temperature and quality (and density if charge_mode)
             if self.charge_mode:
                 T_elem[i], s_elem[i], q_elem[i], rho_elem[i] = self.sim.get_multiple(
-                    'HP_inputs', h_elem[i], P, ('T', 'S','Q', 'D'))
+                    'HP_inputs', h_elem[i], P, ('T', 'S', 'Q', 'D'))
             else:
                 T_elem[i], s_elem[i], q_elem[i] = self.sim.get_multiple(
                     'HP_inputs', h_elem[i], P, ('T', 'S', 'Q'))
-
+                
+            # 온도차 계산
             delta_T = abs(T_elem[i] - self.T_air)
             if 0 < q_elem[i] < 1:
+                # Two phase에서 Const UA 가정
                 Q = self.UA * delta_T
             else:
+                # C_r == 0 에서 eps-NTU 모델 사용(Al exchanger)
                 Cp_elem[i] = self.sim.get_single_no_update('C')
                 eps = 1 - np.exp(- self.UA / (mdot * Cp_elem[i]))
                 Q = eps * mdot * Cp_elem[i] * delta_T

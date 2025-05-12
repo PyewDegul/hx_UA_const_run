@@ -12,6 +12,7 @@ class SystemParams:
     isen_eff: float
     V_comp: float
     f_comp: float
+    CA: None
     DSH_target: float
     DSC_target: float
     tol: float
@@ -45,6 +46,7 @@ class SystemParams_DSH_charge:
     isen_eff: float
     V_comp: float
     f_comp: float
+    CA: None
     DSH_target: float
     charge_target: float
     tol: float
