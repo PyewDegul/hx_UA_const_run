@@ -6,6 +6,7 @@ UA_const, no_P_drop, Air_const, No humid, mdot_DSH_charge based optimization
 2. Air humidity needed
 
 Rule
-1. 새로운 요소, 수정에서 Cycle, Solver, Metric은 새로운 파일에 저장
-2. 새로운 요소, 수정에서 같은 종류의 경우 Component, params는 기존 파일에 저장
-3. 새로운 요소, 수정에서 다른 종류의 경우 새로운 파일에 저장
+1. Make Params for new cond
+2. Make new metrics, components
+3. Make metrics and build up new solver
+4. Run!
