@@ -1,9 +1,7 @@
-from ..core.sim_cycle import SimCycle
-from ..core.params import SystemParams, SystemParams_DSH_charge
 import numpy as np
 
 class Connector:
-    def __init__(self, sim: SimCycle, params: SystemParams_DSH_charge):
+    def __init__(self, sim, params):
         self.sim = sim
         self.p = params
         self.V_tot = self.p.V_connect

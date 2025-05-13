@@ -34,11 +34,24 @@ class SimCycle:
             'Q': CP.iQ,
             'C': CP.iCpmass,
         }
+        # phase_pairs: CoolProp에서 사용하는 유체의 상
+        self.phase_pairs = {
+            'L': CP.iphase_liquid,
+            'G': CP.iphase_gas,
+            'S': CP.iphase_supercritical,
+            'TP': CP.iphase_twophase,
+            'None': CP.iphase_not_imposed
+        }
         
+    # Specify the phase of the fluid
+    def specify_phase(self, phase):
+        self.state.specify_phase(self.phase_pairs[phase])
+
     # Update the state with the given inputs
     def update(self, arg, input1, input2):
         self.state.update(self.input_keys[arg], input1, input2)
 
+    
     # Get the value of a single property(float) or multiple properties(ndarray)
     def get_single_no_update(self, prop : str)-> dict:
         return self.state.keyed_output(self.output_pairs[prop])

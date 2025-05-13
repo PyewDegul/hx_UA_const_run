@@ -8,7 +8,7 @@ class DSHCalculator:
 
     def set_target(self, target: float):
         self.target = target
-
+        
     def error(self, T_eva_out: float, P_eva: float):
         T_sat = self.sim.get_single('PQ_inputs', P_eva, 1, ('T'))
         DSH_cal = T_eva_out - T_sat
