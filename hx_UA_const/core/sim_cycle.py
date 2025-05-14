@@ -9,7 +9,11 @@ class SimCycle:
     # 필요하면 여기서 가져올 수 있음 : 
     def __init__(self, backend_name: str, fluid_name: str):
         self.state = CP.AbstractState(backend_name, fluid_name)
-        # self.P_C = self.state.p_critical()
+        self.P_C = self.state.p_critical()
+        self.T_C = self.state.T_critical()
+
+        self.P_TP = self.state.trivial_keyed_output(CP.iP_triple)
+        self.T_TP = self.state.Ttriple()
 
         # input_keys: CoolProp에서 사용하는 입력값들
         # S, H, D는 모두 질량 기준

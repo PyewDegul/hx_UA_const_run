@@ -1,4 +1,5 @@
 import scipy.optimize as opt
+import numpy as np
 from ..core.sim_cycle import SimCycle
 
 from hx_UA_const.components.compressor import Compressor
@@ -69,8 +70,10 @@ class PressureSolver_mdot_DSH_charge:
             return self.Mdot.error(mdot_comp, mdot_exp)
         
         # bisect or brentq or toms748
+        # Air_Temp 부터 T_critical 사이에서 해 탐색
+        # 안전 범위 0.95 * P_c
         P_cond_low = self.sim.get_single('QT_inputs', 0, T_cond_air, ('P'))
-        P_cond_high = self.sim.get_single('QT_inputs', 0, T_cond_air + 30, ('P'))
+        P_cond_high = min(P_cond_low + (self.sim.P_C - P_cond_low) * 0.5, self.sim.P_C * 0.95)
         P_cond_sol = opt.brentq(cycle_mdot, P_cond_low, P_cond_high, xtol=self.tol)
 
         h_comp_out, s_comp_out, T_comp_out, mdot = self.comp.process(P_eva, P_cond_sol)
@@ -99,8 +102,10 @@ class PressureSolver_mdot_DSH_charge:
             return self.dsh.error(T_eva_out, P_eva)
         
         # bisect or brentq or toms748
-        P_eva_low = self.sim.get_single('QT_inputs', 1, T_eva_air - 30, ('P'))
-        P_eva_high = self.sim.get_single('QT_inputs', 1, T_eva_air - 10, ('P'))
+        # Air_Temp 부터 T_triple 사이에서 해 탐색
+        # 안전 범위 0.1 MPa
+        P_eva_high = self.sim.get_single('QT_inputs', 1, T_eva_air, ('P'))
+        P_eva_low = max(P_eva_high - (P_eva_high - self.sim.P_TP) * 0.5, 0.1 * 1e6)
         P_eva_sol = opt.brentq(cycle_DSH, P_eva_low, P_eva_high, xtol=self.tol)
 
         solved_cond = self.solve_cond(P_eva_sol, T_cond_air)
@@ -118,7 +123,7 @@ class PressureSolver_mdot_DSH_charge:
     def solve_charge(self, T_cond_air: float, T_eva_air: float):
         def cycle_charge(DSH_ass):
             self.params.DSH_target = DSH_ass
-            self.comp.set_target(DSH_ass)
+            self.comp.set_DSH(DSH_ass)
             self.dsh.set_target(DSH_ass)
 
             solved_eva = self.solve_evap(T_cond_air, T_eva_air)
@@ -132,7 +137,7 @@ class PressureSolver_mdot_DSH_charge:
         DSH_sol = opt.brentq(cycle_charge, DSH_low, DSH_high, xtol=self.tol)
         
         self.params.DSH_target = DSH_sol
-        self.comp.set_target(DSH_sol)
+        self.comp.set_DSH(DSH_sol)
         self.dsh.set_target(DSH_sol)
 
         solved_eva = self.solve_evap(T_cond_air, T_eva_air)

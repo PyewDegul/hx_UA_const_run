@@ -36,8 +36,8 @@ from hx_UA_const.solvers.mdot_dsh_charge_to_pressure_solver import PressureSolve
 
 class CycleModel_mdot_charge:
     def __init__(self, params: SystemParams_mdot_DSH_charge, backend: str, fluid: str):
-        self.params = params
         sim = SimCycle(backend, fluid)
+        self.params = params
         self.solver = PressureSolver_mdot_DSH_charge(sim, self.params)
 
     def run(self):

@@ -2,17 +2,17 @@ class Compressor:
     def __init__(self, sim, params):
         self.sim = sim
         self.p = params
-        self.target = params.DSH_target
+        self.DSH = params.DSH_target
 
-    def set_target(self, target: float):
-        self.target = target
+    def set_DSH(self, target: float):
+        self.DSH = target
 
     def process(self, P_eva: float, P_cond:float) -> tuple[float, float]:
         # Initialize the simulation cycle
         # self.sim.specify_phase('G')
 
         T_sat = self.sim.get_single('PQ_inputs', P_eva, 1, ('T'))
-        T_comp_in = T_sat + self.target
+        T_comp_in = T_sat + self.DSH
 
         # 압축기 입구 엔탈피, 엔트로피, 밀도, 유량의 계산
         h_comp_in, s_comp_in, rho_comp_in = self.sim.get_multiple('PT_inputs', P_eva, T_comp_in, ('H', 'S', 'D'))
