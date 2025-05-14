@@ -57,17 +57,13 @@ class HeatExchanger:
             else:
                 h_elem[i + 1] = h_elem[i] + Q / mdot
             
-        h_out = h_elem[-1]
-        s_out = s_elem[-1]
-        T_out = self.sim.get_single('HP_inputs', h_out, P, ('T'))
-
         if self.V_elem == 0.0:
             # No charge mode
-            return h_out, s_out, T_out
+            return h_elem, s_elem, T_elem
         else:
             m_elem = self.V_elem * rho_elem
             m_tot = np.sum(m_elem)
-            return h_out, s_out, T_out, m_tot
+            return h_elem, s_elem, T_elem, m_tot
         
 
 class Condenser(HeatExchanger):

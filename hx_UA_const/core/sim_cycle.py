@@ -46,7 +46,10 @@ class SimCycle:
             'TP': CP.iphase_twophase,
             'None': CP.iphase_not_imposed
         }
-        
+    
+    def get_state(self):
+        return self.state
+    
     # Specify the phase of the fluid
     def specify_phase(self, phase):
         self.state.specify_phase(self.phase_pairs[phase])
