@@ -18,6 +18,8 @@ class CycleModel:
     
     def plot(self):
         plot_cycle = PlotModel(self.sim, self.params, self.res)
+        plot_cycle.plot_TS()
+        plot_cycle.plot_PH()
 
 
 '''2. DSH, Charge to Pressure Solver(2-loop)'''
@@ -37,7 +39,8 @@ class CycleModel_charge:
     
     def plot(self):
         plot_cycle = PlotModel(self.sim, self.params, self.res)
-
+        plot_cycle.plot_TS()
+        plot_cycle.plot_PH()
         
 '''3. mdot, DSH, Charge to Pressure Solver(3-loop)'''
 from hx_UA_const.core.sim_cycle import SimCycle
@@ -57,3 +60,5 @@ class CycleModel_mdot_charge:
     
     def plot(self):
         plot_cycle = PlotModel(self.sim, self.params, self.res)
+        plot_cycle.plot_TS()
+        plot_cycle.plot_PH()

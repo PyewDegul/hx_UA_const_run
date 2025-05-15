@@ -1,4 +1,4 @@
 # hx_UA_const/core/__init__.py
 
 
-__all__ = ["SimCycle", "SystemParams"]
+__all__ = ["SimCycle", "SystemParams", "Graph_class"]

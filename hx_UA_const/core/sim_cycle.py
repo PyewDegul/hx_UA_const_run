@@ -11,6 +11,7 @@ class SimCycle:
         self.state = CP.AbstractState(backend_name, fluid_name)
         self.P_C = self.state.p_critical()
         self.T_C = self.state.T_critical()
+        self.S_C = self.state.trivial_keyed_output(CP.iP_triple)
 
         self.P_TP = self.state.trivial_keyed_output(CP.iP_triple)
         self.T_TP = self.state.Ttriple()
