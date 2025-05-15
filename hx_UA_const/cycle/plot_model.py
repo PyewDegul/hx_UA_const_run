@@ -12,6 +12,9 @@ class PlotModel():
         self.params = params
         self.res = res
 
+        self.backend = self.sim.backend
+        self.fluid = self.sim.fluid
+
         '''TS_diagram, PH_diagram'''
         # self.sim에 dependent
 
@@ -79,7 +82,13 @@ class PlotModel():
         ax.legend(loc='best')
         # Show and save figure
         plt.show()
-        fig.savefig('Ts_diagram.png')
+
+        # 이미지 저장
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        save_dir = os.path.join(script_dir, "Diagrams")
+        os.makedirs(save_dir, exist_ok=True)               # 폴더 없으면 생성
+        fig_filename = os.path.join(save_dir, f"{self.backend}_{self.fluid}_TS_diagram.png")
+        fig.savefig(fig_filename)
 
     def plot_PH(self):
         T_min = self.sim.T_TP + 1e-6
@@ -141,4 +150,10 @@ class PlotModel():
         ax.set_yscale('log')
         ax.legend(loc='best')
         plt.show()
-        fig.savefig('Ph_diagram.png')
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        save_dir = os.path.join(script_dir, "Diagrams")
+        os.makedirs(save_dir, exist_ok=True)               # 폴더 없으면 생성
+        fig_filename = os.path.join(save_dir, f"{self.backend}_{self.fluid}_PH_diagram.png")
+        fig.savefig(fig_filename)
+

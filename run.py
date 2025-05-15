@@ -16,12 +16,11 @@ params1 = SystemParams_DSH_DSC(
 
 model1 = CycleModel(params1, "REFPROP","R32")
 # cProfile.run('model1.run()')  # Profiling the run method
-
+'''
 results = model1.run()
-model1.plot()
-
+# model1.plot()
 print(results)
-
+'''
 '''2. DSH, Charge to Pressure Solver(2-loop)'''
 # DSH, Charge to Pressure Solver
 params2 = SystemParams_DSH_charge(
@@ -35,9 +34,11 @@ params2 = SystemParams_DSH_charge(
 
 model2 = CycleModel_charge(params2, "REFPROP","R32")
 # cProfile.run('model2.run()')  # Profiling the run method
+'''
 results = model2.run()
-model2.plot()
-print(results)
+# model2.plot()
+# print(results)
+'''
 
 '''3. mdot, DSH, Charge to Pressure Solver(3-loop)'''
 # mdot, DSH, Charge to Pressure Solver(DSH 고정 X)
@@ -50,7 +51,7 @@ params3 = SystemParams_mdot_DSH_charge(
     DSH_target=0.0, charge_target = 0.32, tol=0.01
 )
 model3 = CycleModel_mdot_charge(params3, "REFPROP","R32")
-# cProfile.run('model3.run()')  # Profiling the run method
+cProfile.run('model3.run()')  # Profiling the run method
 '''
 results = model3.run()
 model3.plot()
