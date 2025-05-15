@@ -16,11 +16,11 @@ params1 = SystemParams_DSH_DSC(
 
 model1 = CycleModel(params1, "REFPROP","R32")
 # cProfile.run('model1.run()')  # Profiling the run method
-'''
+
 results = model1.run()
-# model1.plot()
-print(results)
-'''
+model1.plot()
+# print(results)
+
 '''2. DSH, Charge to Pressure Solver(2-loop)'''
 # DSH, Charge to Pressure Solver
 params2 = SystemParams_DSH_charge(

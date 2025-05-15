@@ -261,6 +261,7 @@ def test_sim_interp():
     h_elem = np.linspace(280*1e3, 320*1e3, N)
     for i in range(N):
         T_elem[i], s_elem[i], q_elem[i], rho_elem[i] = sim.get_multiple('HP_inputs', h_elem[i], 3e6, ('T', 'S', 'Q', 'D'))
-
+'''
 cProfile.run('test_sim()')
 cProfile.run('test_sim_interp()')
+'''

@@ -12,8 +12,8 @@ class PlotModel():
         self.params = params
         self.res = res
 
-        self.backend = self.sim.backend
-        self.fluid = self.sim.fluid
+        self.backend = self.state.backend_name()
+        self.fluid = self.state.fluid_names()
 
         '''TS_diagram, PH_diagram'''
         # self.sim에 dependent
@@ -77,7 +77,7 @@ class PlotModel():
         # Plot critical point
         ax.scatter(s_crit, T_crit_C, color='red', zorder=3, label='Critical Point')
         # Plot cycle process line
-        ax.plot(cycle_s, cycle_T_C, color='blue', marker='o', markersize=1, label='Cycle Path')
+        ax.plot(cycle_s, cycle_T_C, color='black', markersize=1, label='Cycle Path')
         # Add legend (optional, to identify lines)
         ax.legend(loc='best')
         # Show and save figure
@@ -145,7 +145,7 @@ class PlotModel():
         # Plot critical point
         ax.scatter(h_crit, P_crit, color='red', zorder=3, label='Critical Point')
         # Plot cycle path
-        ax.plot(cycle_h, cycle_P, color='blue', marker='o', markersize=1, label='Cycle Path')
+        ax.plot(cycle_h, cycle_P, color='black', markersize=1, label='Cycle Path')
         # Set y-axis to log scale for better visualization (optional but common for P-h):contentReference[oaicite:16]{index=16}
         ax.set_yscale('log')
         ax.legend(loc='best')
