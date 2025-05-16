@@ -51,7 +51,7 @@ params3 = SystemParams_mdot_DSH_charge(
     DSH_target=0.0, charge_target = 0.32, tol=0.01
 )
 model3 = CycleModel_mdot_charge(params3, "REFPROP","R32")
-cProfile.run('model3.run()')  # Profiling the run method
+# cProfile.run('model3.run()')  # Profiling the run method
 '''
 results = model3.run()
 model3.plot()
