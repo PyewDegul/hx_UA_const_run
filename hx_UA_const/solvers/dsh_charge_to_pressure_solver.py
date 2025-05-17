@@ -51,6 +51,7 @@ class PressureSolver_charge:
         
         self.dsh = DSHCalculator(sim, self.params.DSH_target)
         self.charge = ChargeCalculator(sim, self.params.charge_target)
+        
         self.tol = self.params.tol
 
 

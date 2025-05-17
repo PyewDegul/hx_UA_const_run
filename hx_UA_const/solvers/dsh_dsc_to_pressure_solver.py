@@ -43,6 +43,7 @@ class PressureSolver:
         self.cond = Condenser(sim, self.params)
         self.exp = ExpansionValve(sim, self.params)
         self.eva = Evaporator(sim, self.params)
+        
         self.dsh = DSHCalculator(sim, self.params.DSH_target)
         self.dsc = DSCCalculator(sim, self.params.DSC_target)
 

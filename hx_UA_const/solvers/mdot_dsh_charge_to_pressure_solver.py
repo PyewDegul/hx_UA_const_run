@@ -52,9 +52,10 @@ class PressureSolver_mdot_DSH_charge:
         self.exp = ExpansionValve(sim, self.params)
         self.eva = Evaporator(sim, self.params)
         self.conn = Connector(sim, self.params)
+
+        self.Mdot = mdotCalculator(sim)
         self.dsh = DSHCalculator(sim, self.params.DSH_target)
         self.charge = ChargeCalculator(sim, self.params.charge_target)
-        self.Mdot = mdotCalculator(sim)
 
         self.tol = params.tol
  
@@ -106,7 +107,6 @@ class PressureSolver_mdot_DSH_charge:
             )
         def DSH_err(P_eva):
             solved_eva = cycle_DSH(P_eva)
-            print(self.dsh.target)
             return self.dsh.error(solved_eva.T_eva_elem[-1], P_eva)
         
         # bisect or brentq or toms748
