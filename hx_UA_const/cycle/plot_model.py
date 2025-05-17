@@ -39,11 +39,11 @@ class PlotModel():
             sat_vap_s[i] = self.sim.get_single('QT_inputs', 1, T_vals[i], ('S')) / 1000.0 # entropy [kJ/kgK]
         
         T_vals_C = T_vals # [K]
-
+        '''
         # Critical point properties for marking
         s_crit = self.sim.get_single('PT_inputs', self.sim.P_C, self.sim.T_C, ('S'))  / 1000.0 # entropy [kJ/kgK]  
         T_crit_C = self.sim.T_C  # Critical temperature in K
-        
+        '''
         # Prepare cycle data points (convert to proper units)
         # Evaporator exit / Compressor inlet (Point 1)
         T_comp_in_C = self.res.T_eva_elem[-1]  # [K]
@@ -75,7 +75,7 @@ class PlotModel():
         ax.plot(sat_liq_s, T_vals_C, color='black', linestyle='-', label='Sat. Liquid')
         ax.plot(sat_vap_s, T_vals_C, color='black',  linestyle='-', label='Sat. Vapor')
         # Plot critical point
-        ax.scatter(s_crit, T_crit_C, color='red', zorder=3, label='Critical Point')
+        # ax.scatter(s_crit, T_crit_C, color='red', zorder=3, label='Critical Point')
         # Plot cycle process line
         ax.plot(cycle_s, cycle_T_C, color='black', markersize=1, label='Cycle Path')
         # Add legend (optional, to identify lines)
@@ -108,11 +108,11 @@ class PlotModel():
         sat_vap_h = sat_vap_h / 1000.0 # [kJ/kg]
         sat_vap_p = sat_vap_p / 1e6 # [kJ/kgK]
 
-        
+        '''
         # Critical point properties for marking
         h_crit = self.sim.get_single('PT_inputs', self.sim.P_C, self.sim.T_C, ('H')) / 1000.0 # entropy [kJ/kg]  
         P_crit = self.sim.P_C / 1e6 # critical pressure [MPa]
-        
+        '''
         # Cycle points (enthalpy in kJ/kg, pressure in MPa)
         # Evaporator exit / Compressor inlet
         h_comp_in = self.res.h_eva_elem[-1] / 1000.0    # kJ/kg
@@ -143,7 +143,7 @@ class PlotModel():
         ax.plot(sat_liq_h, sat_liq_p, color='black', linestyle='-', label='Sat. Liquid')
         ax.plot(sat_vap_h, sat_vap_p, color='black',  linestyle='-', label='Sat. Vapor')
         # Plot critical point
-        ax.scatter(h_crit, P_crit, color='red', zorder=3, label='Critical Point')
+        # ax.scatter(h_crit, P_crit, color='red', zorder=3, label='Critical Point')
         # Plot cycle path
         ax.plot(cycle_h, cycle_P, color='black', markersize=1, label='Cycle Path')
         # Set y-axis to log scale for better visualization (optional but common for P-h):contentReference[oaicite:16]{index=16}

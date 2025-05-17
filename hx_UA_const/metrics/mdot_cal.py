@@ -5,4 +5,4 @@ class mdotCalculator:
         self.sim = sim_cycle
 
     def error(self, mdot_exp: float, mdot_comp:float):
-        return (mdot_comp - mdot_exp) / mdot_exp
+        return (mdot_comp - mdot_exp) / (mdot_exp)

@@ -2,7 +2,7 @@
 import CoolProp.CoolProp as CP
 from operator import itemgetter, attrgetter
 import numpy as np
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
 import os
 import cProfile
 
@@ -87,6 +87,13 @@ class SimCycle_Interp(SimCycle):
         super().__init__(backend_name, fluid_name)
         T_max = self.state.Tmax()
 
+        if n_points_p == 1 and n_points_h == 1:
+            mode = 'linear'
+        elif n_points_p == 2 or n_points_h == 2:
+            mode = 'quadratic'
+        elif n_points_p == 3 and n_points_h == 3:
+            mode = 'cubic'
+        
         # 1) 저장할 디렉터리와 파일명 정의
         script_dir = os.path.dirname(os.path.abspath(__file__))
         cache_dir = os.path.join(script_dir, "cache")
@@ -161,7 +168,17 @@ class SimCycle_Interp(SimCycle):
                                  T_table=T_table, S_table=S_table,
                                  D_table=D_table, Q_table=Q_table,
                                  C_table=C_table)
-            
+        '''
+        values = np.stack([T_table, S_table, D_table, Q_table, C_table], axis=-1)
+        self.interpolator = RegularGridInterpolator(
+            (P_vals, H_vals),       # 축 정의
+            values,                 # (nP, nH, 5)
+            method='linear',        # bilinear
+            bounds_error=False,
+            fill_value=None         # 외삽 시 NaN 반환
+        )
+        '''
+        
         # 2D 보간 스플라인 생성 (건도 Q는 1차, 나머지 3차 보간)
         self.T_spline   = RectBivariateSpline(P_vals, H_vals, T_table, kx=degree_x, ky=degree_y, s=0)
         self.S_spline   = RectBivariateSpline(P_vals, H_vals, S_table, kx=degree_x, ky=degree_y, s=0)
@@ -170,12 +187,12 @@ class SimCycle_Interp(SimCycle):
         # cp 테이블에 NaN이 있을 경우 보간기에서 자동 처리되지만, 
         # 필요시 NaN을 0으로 대체하여 보간할 수도 있음 (여기서는 그대로 둠)
         self.C_spline   = RectBivariateSpline(P_vals, H_vals, C_table, kx=degree_x, ky=degree_y, s=0)
-
-        # --- in SimCycle_Interp.__init__() 끝부분에 -------------------
-        self._idx = {'P': 0, 'H': 1, 'T': 2, 'S': 3,
-                    'D': 4, 'Q': 5, 'C': 6}
-        # 7개의 최근 상태 값을 담을 1-D ndarray
-        self.last_vals = np.empty(7, dtype=np.float64)
+        
+        
+        self._idx = {'T': 0, 'S': 1,
+                    'D': 2, 'Q': 3, 'C': 4}
+        # 5개의 최근 상태 값을 담을 1-D ndarray
+        self.last_vals = np.empty(5, dtype=np.float64)
 
     def specify_phase_itp(self, phase: str):
         """CoolProp 상 계산 시 상(specify phase) 지정 (보간 계산에는 영향 없음)"""
@@ -197,17 +214,16 @@ class SimCycle_Interp(SimCycle):
         if arg != 'HP_inputs':
             raise NotImplementedError("SimCycle_Interp only supports HP_inputs (enthalpy-pressure) updates.")
         # input1 = enthalpy [J/kg], input2 = pressure [Pa]
-        h = input1; P = input2
+        h, P = input1, input2
         # spline은 여전히 1 스칼라씩 계산해야 하지만
         # 결과를 바로 ndarray에 저장한다
-        self.last_vals[:] = (
-            P, h,
-            self.T_spline.ev(P, h),
-            self.S_spline.ev(P, h),
-            self.D_spline.ev(P, h),
-            self.Q_spline.ev(P, h),
-            self.C_spline.ev(P, h)
-        )
+        vals = np.array([self.T_spline.ev(P, h),
+                        self.S_spline.ev(P, h),
+                        self.D_spline.ev(P, h),
+                        self.Q_spline.ev(P, h),
+                        self.C_spline.ev(P, h)], dtype=np.float64) 
+
+        self.last_vals[:] = vals
 
     def get_single_no_update_itp(self, prop: str):
         """마지막 상태에서 단일 속성 반환"""
@@ -231,7 +247,7 @@ class SimCycle_Interp(SimCycle):
 
 
 def test_sim():
-    sim = SimCycle("REFPROP", "R32")
+    sim = SimCycle("HEOS", "R32")
     N = int(1e5)
 
     T_elem = np.empty(N)
@@ -243,7 +259,7 @@ def test_sim():
         T_elem[i], s_elem[i], q_elem[i], rho_elem[i] = sim.get_multiple('HP_inputs', h_elem[i], 3e6, ('T', 'S', 'Q', 'D'))
 
 def test_sim_interp():
-    sim = SimCycle_Interp("REFPROP", "R32", n_points_p =  1000, n_points_h = 1000, degree_x = 1, degree_y = 1)
+    sim = SimCycle_Interp("HEOS", "R32", n_points_p =  1000, n_points_h = 1000, degree_x = 1, degree_y = 1)
     N = int(1e5)
 
     T_elem = np.empty(N)
@@ -254,7 +270,8 @@ def test_sim_interp():
     for i in range(N):
         T_elem[i], s_elem[i], q_elem[i], rho_elem[i] = sim.get_multiple_itp('HP_inputs', h_elem[i], 3e6, ('T', 'S', 'Q', 'D'))
 
-test_sim_interp()
+# test_sim()
+# test_sim_interp()
 '''
 cProfile.run('test_sim()')
 cProfile.run('test_sim_interp()')

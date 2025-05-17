@@ -63,7 +63,7 @@ class PressureSolver_mdot_DSH_charge:
         def cycle_mdot(P_cond):
             h_comp_out, s_comp_out, T_comp_out, mdot = self.comp.process(P_eva, P_cond)
             h_cond_elem, s_cond_elem, T_cond_elem, m_cond = self.cond.exchange(mdot, P_cond, h_comp_out)
-            h_exp_out, s_exp_out, T_exp_out, _ = self.exp.process(P_eva, P_cond, h_cond_elem[-1])
+            h_exp_out, s_exp_out, T_exp_out, mdot_exp = self.exp.process(P_eva, P_cond, h_cond_elem[-1])
             return solved_cond_results(
                 P_cond_sol=P_cond,
                 h_comp_out=h_comp_out,
@@ -106,6 +106,7 @@ class PressureSolver_mdot_DSH_charge:
             )
         def DSH_err(P_eva):
             solved_eva = cycle_DSH(P_eva)
+            print(self.dsh.target)
             return self.dsh.error(solved_eva.T_eva_elem[-1], P_eva)
         
         # bisect or brentq or toms748
@@ -134,7 +135,7 @@ class PressureSolver_mdot_DSH_charge:
             return self.charge.error(solved_res.mtot)
         
         # bisect or brentq or toms748
-        DSH_low = 1e-3
+        DSH_low = 1
         DSH_high = 20
         DSH_sol = opt.brentq(charge_err, DSH_low, DSH_high, xtol=self.tol)
         return cycle_charge(DSH_sol)
