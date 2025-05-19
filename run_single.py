@@ -30,7 +30,7 @@ class SingleRunner:
                         backend=self.backend,
                         fluid=self.fluid)
             result = model.calculate()
-            rec = asdict(result)
+            rec = result.to_dict(key_with_unit = True)
             return model, rec
         except ValueError:
             # 실패한 케이스도 축 값은 남겨둠
@@ -38,66 +38,41 @@ class SingleRunner:
 
     def run_DSH_DSC(self):
         # 1) DSH vs DSC
-        base_kwargs = dict(
-            UA_total=1000, N_cond=200, N_eva=50,
-            T_cond_air=35+273.15, T_eva_air=27+273.15,
-            isen_eff=0.9, V_comp=2e-5, f_comp=50,
-            DSH_target=5, DSC_target=5,
-            CA=None, tol=0.01
-        )
         model, rec= self._run_sweep(
             param_cls   = SystemParams_DSH_DSC,
             model_cls   = CycleModel,
-            base_kwargs = base_kwargs,
+            base_kwargs = self.base_kwargs_map["DSH_DSC"],
         )
-
         return model, rec
 
     def run_DSH_charge(self):
         # 1) DSH vs DSC
-        base_kwargs = dict(
-            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
-            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-            isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
-            CA = None,
-            DSH_target=5, charge_target=0.4, tol=0.01
-        )
         model, rec = self._run_sweep(
             param_cls   = SystemParams_DSH_charge,
             model_cls   = CycleModel_charge,
-            base_kwargs = base_kwargs,
+            base_kwargs = self.base_kwargs_map["DSH_charge"],
         )
         return model, rec
 
     def run_mdot_charge(self):
         # 1) DSH vs DSC
-        base_kwargs = dict(
-            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
-            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-            isen_eff = 0.7, V_comp =2e-5, f_comp=50,
-            DSH_target= 0.0, # DSH_target is dummpy for this model
-            CA=8e-7, charge_target = 0.32, tol=0.01
-        )
         model, rec = self._run_sweep(
             param_cls   = SystemParams_mdot_DSH_charge,
             model_cls   = CycleModel_mdot_charge,
-            base_kwargs = base_kwargs,
+            base_kwargs = self.base_kwargs_map["mdot_charge"],
         )
         return model, rec
 
 
 if __name__ == "__main__":
     # Example usage
-    base_kwargs_1 = dict(
-            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
-            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-            isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
-            CA = None,
-            DSH_target=5, charge_target=0.4, tol=0.01
-        )
+    base_kwargs_1 = {
+                "UA_total":1000, "N_cond":200, "N_eva":50,
+                "T_cond_air":35+273.15, "T_eva_air":27+273.15,
+                "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
+                "DSH_target":5, "DSC_target":5,
+                "CA":None, "tol":0.01
+    }
     base_kwargs_2 = dict(
             U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
             D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 

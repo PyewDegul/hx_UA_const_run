@@ -5,21 +5,24 @@ import pandas as pd
 from itertools import product
 from hx_UA_const.cycle.cycle_model import CycleModel, CycleModel_charge ,CycleModel_mdot_charge
 from hx_UA_const.core.params import SystemParams_DSH_DSC, SystemParams_DSH_charge, SystemParams_mdot_DSH_charge  # 예시
-from dataclasses import asdict
-from functools import partial
+
 from time import time
 
 class BatchRunner:
     def __init__(self,
-                 x1_vals: np.ndarray, x2_vals: np.ndarray,
+                 sweeps,
                  backend: str, fluid: str,
-                 base_kwargs_map : dict[str, dict] | None = None,
                  res_dir: str = None):
-        self.x1_vals = x1_vals
-        self.x2_vals = x2_vals
+        
+        self.x1_vals = sweeps["x1_vals"]
+        self.x2_vals = sweeps["x2_vals"]
+        self.base_kwargs_map = sweeps["base_kwargs_map"] or {
+            "DSH_DSC": {},
+            "DSH_charge": {},
+            "mdot_charge": {}
+            }
         self.backend = backend
         self.fluid = fluid
-        self.base_kwargs_map = base_kwargs_map
 
         # 결과 디렉토리
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +62,8 @@ class BatchRunner:
                               backend=self.backend,
                               fluid=self.fluid)
                 result = model.calculate()
-                rec = {**sweep_kwargs, **asdict(result)}
+                rec = {**sweep_kwargs}
+                rec.update(result.to_dict(key_with_unit=True))
             except ValueError:
                 # 실패한 케이스도 축 값은 남겨둠
                 rec = {**sweep_kwargs}
@@ -107,12 +111,12 @@ if __name__ == "__main__":
     x2_N = 20
     '''기본 parameter'''
     # DSH_DSC
-    base_kwarg_1 = {
-                "UA_total":1000, "N_cond":200, "N_eva":50,
-                "T_cond_air":35+273.15, "T_eva_air":27+273.15,
-                "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
-                "CA":None, "tol":0.01
-    }
+    base_kwarg_1 = dict(
+                UA_total=1000, N_cond=200, N_eva=50,
+                T_cond_air=35+273.15, T_eva_air=27+273.15,
+                isen_eff=0.9, V_comp=2e-5, f_comp=50,
+                CA = None, tol=0.01
+    )
     # DSH_charge
     base_kwarg_2 = dict(
                 U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
@@ -129,39 +133,58 @@ if __name__ == "__main__":
                 isen_eff=0.7, V_comp=2e-5, f_comp=50,
                 DSH_target=0.0, tol=0.01
     )
-    
+    # DSH_DSC
+    sweeps_1 = {
+        "x1_vals": np.linspace(1, 10, x1_N),
+        "x2_vals": np.linspace(1, 10, x2_N),
+        "base_kwargs_map": {
+            "DSH_DSC": base_kwarg_1,
+            "DSH_charge": {},
+            "mdot_charge": {}
+        }
+    }
+    # DSH_charge
+    sweeps_2 = {
+        "x1_vals": np.linspace(1, 10, x1_N),
+        "x2_vals": np.linspace(0.1, 1, x2_N),
+        "base_kwargs_map": {
+            "DSH_DSC": {},
+            "DSH_charge": base_kwarg_2,
+            "mdot_charge": {}
+        }
+    }
+    # CA_charge
+    sweeps_3 = {
+        "x1_vals": np.linspace(8e-7, 1e-6, x1_N),
+        "x2_vals": np.linspace(0.2, 0.5, x2_N),
+        "base_kwargs_map": {
+            "DSH_DSC": {},
+            "DSH_charge": {},
+            "mdot_charge": base_kwarg_3
+        }
+    }
+
+
     '''2 loop - DSH/DSC'''
     run_batch = BatchRunner(
-        x1_vals = np.linspace(1, 10, x1_N),
-        x2_vals = np.linspace(1, 10, x2_N),
-        base_kwargs_map = {"DSH_DSC": base_kwarg_1, 
-                           "DSH_charge": {}, 
-                           "mdot_charge": {}},
+        sweeps_1,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    # run_batch.run_DSH_DSC()
+    run_batch.run_DSH_DSC()
     
     '''2 loop - DSH/Charge'''
     run_batch = BatchRunner(
-        x1_vals = np.linspace(1, 10, x1_N),
-        x2_vals = np.linspace(0.1, 1, x2_N),
-        base_kwargs_map = {"DSH_DSC": {}, 
-                           "DSH_charge": base_kwarg_2, 
-                           "mdot_charge": {}},
+        sweeps_2,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    # run_batch.run_DSH_charge()
+    run_batch.run_DSH_charge()
 
     '''3 loop - CA/Charge'''
     run_batch = BatchRunner(
-        x1_vals = np.linspace(8e-7, 1e-6, x1_N),
-        x2_vals = np.linspace(0.2, 0.5, x2_N),
-        base_kwargs_map = {"DSH_DSC": {}, 
-                           "DSH_charge": {}, 
-                           "mdot_charge": base_kwarg_3},
+        sweeps_3,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    # run_batch.run_mdot_charge()
+    run_batch.run_mdot_charge()
