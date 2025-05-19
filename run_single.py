@@ -1,61 +1,136 @@
 # run.py
 from hx_UA_const.cycle.cycle_model import CycleModel, CycleModel_charge, CycleModel_mdot_charge
 from hx_UA_const.core.params import SystemParams_DSH_DSC, SystemParams_DSH_charge, SystemParams_mdot_DSH_charge # 예시 경로, 실제 구조에 따라 조정
-
-import cProfile
-import pstats
 from dataclasses import asdict 
 
-'''1. DSH, DSC to Pressure Solver(2-loop)'''
-params1 = SystemParams_DSH_DSC(
-    UA_total=1000, N_cond=200, N_eva=50,
-    T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-    isen_eff = 0.9, V_comp =2e-5, f_comp=50, 
-    CA = None,
-    DSH_target=5, DSC_target=5, tol=0.01
-)
+class SingleRunner:
+    def __init__(self,
+                 backend: str,
+                 fluid: str,
+                 base_kwargs_map: dict[str, dict] | None = None):
+        self.base_kwargs_map = base_kwargs_map
+        self.backend = backend
+        self.fluid = fluid
 
-model1 = CycleModel(params1, "BICUBIC&HEOS","R32")
-res = model1.calculate()
-res_dict = asdict(res)
-# results = model1.run()
-# model1.plot()
-# print(results)
+    def _run_sweep(self,
+                   param_cls,
+                   model_cls,
+                   base_kwargs: dict):
+        """
+        param_cls   : SystemParams_* 클래스
+        model_cls   : CycleModel_* 클래스
+        base_kwargs : 파라미터 (dict)
+        """
+        # 매번 깨끗한 리스트로 시작
+        # param 생성 (기본 파라미터 + sweep 축 파라미터)
+        params = param_cls(**base_kwargs)
+        
+        try:
+            model = model_cls(params,
+                        backend=self.backend,
+                        fluid=self.fluid)
+            result = model.calculate()
+            rec = asdict(result)
+            return model, rec
+        except ValueError:
+            # 실패한 케이스도 축 값은 남겨둠
+            print(f"Error in calculation for {base_kwargs}")
 
-'''2. DSH, Charge to Pressure Solver(2-loop)'''
-# DSH, Charge to Pressure Solver
-params2 = SystemParams_DSH_charge(
-    U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-    D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
-    T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-    isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
-    CA = None,
-    DSH_target=5, charge_target=0.4, tol=0.01
-)
+    def run_DSH_DSC(self):
+        # 1) DSH vs DSC
+        base_kwargs = dict(
+            UA_total=1000, N_cond=200, N_eva=50,
+            T_cond_air=35+273.15, T_eva_air=27+273.15,
+            isen_eff=0.9, V_comp=2e-5, f_comp=50,
+            DSH_target=5, DSC_target=5,
+            CA=None, tol=0.01
+        )
+        model, rec= self._run_sweep(
+            param_cls   = SystemParams_DSH_DSC,
+            model_cls   = CycleModel,
+            base_kwargs = base_kwargs,
+        )
 
-model2 = CycleModel_charge(params2, "BICUBIC&HEOS","R32")
-res = model2.calculate()
-res_dict = asdict(res)
-# results = model2.run()
+        return model, rec
+
+    def run_DSH_charge(self):
+        # 1) DSH vs DSC
+        base_kwargs = dict(
+            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+            isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
+            CA = None,
+            DSH_target=5, charge_target=0.4, tol=0.01
+        )
+        model, rec = self._run_sweep(
+            param_cls   = SystemParams_DSH_charge,
+            model_cls   = CycleModel_charge,
+            base_kwargs = base_kwargs,
+        )
+        return model, rec
+
+    def run_mdot_charge(self):
+        # 1) DSH vs DSC
+        base_kwargs = dict(
+            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+            isen_eff = 0.7, V_comp =2e-5, f_comp=50,
+            DSH_target= 0.0, # DSH_target is dummpy for this model
+            CA=8e-7, charge_target = 0.32, tol=0.01
+        )
+        model, rec = self._run_sweep(
+            param_cls   = SystemParams_mdot_DSH_charge,
+            model_cls   = CycleModel_mdot_charge,
+            base_kwargs = base_kwargs,
+        )
+        return model, rec
 
 
-'''3. mdot, DSH, Charge to Pressure Solver(3-loop)'''
-# mdot, DSH, Charge to Pressure Solver(DSH 고정 X)
-params3 = SystemParams_mdot_DSH_charge(
-    U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-    D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
-    T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-    isen_eff = 0.7, V_comp =2e-5, f_comp=50,
-    DSH_target= 0.0, # DSH_target is dummpy for this model
-    CA=8e-7, charge_target = 0.32, tol=0.01
-)
-model3 = CycleModel_mdot_charge(params3, "BICUBIC&HEOS","R32")
-res= model3.calculate()
-res_dict = asdict(res)
-print(res_dict)
+if __name__ == "__main__":
+    # Example usage
+    base_kwargs_1 = dict(
+            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+            isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
+            CA = None,
+            DSH_target=5, charge_target=0.4, tol=0.01
+        )
+    base_kwargs_2 = dict(
+            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+            isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
+            CA = None,
+            DSH_target=5, charge_target=0.4, tol=0.01
+        )
+    base_kwargs_3 = dict(
+            U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+            D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5, 
+            T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
+            isen_eff = 0.7, V_comp =2e-5, f_comp=50,
+            DSH_target= 0.0, # DSH_target is dummpy for this model
+            CA=8e-7, charge_target = 0.32, tol=0.01
+        )
+    
+    runner = SingleRunner(base_kwargs_map = {"DSH_DSC": base_kwargs_1, 
+                           "DSH_charge": base_kwargs_2, 
+                           "mdot_charge": base_kwargs_3},
+                           backend = "BICUBIC&HEOS", 
+                           fluid = "R32")
 
-# cProfile.run('model3.run()')  # Profiling the run method
-'''
-results = model3.run()
-model3.plot()
-'''
+    # Run the models
+    model1, rec1 = runner.run_DSH_DSC()
+    model2, rec2 = runner.run_DSH_charge()
+    model3, rec3 = runner.run_mdot_charge()
+    print(rec1)
+    print(rec2)
+    print(rec3)
+    '''    
+    # Plot the model results
+    model1.plot()
+    model2.plot()
+    model3.plot()
+    '''

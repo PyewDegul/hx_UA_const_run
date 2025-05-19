@@ -52,7 +52,6 @@ class Params_Geometry_charge(BaseParams_DSH):
             val = getattr(self, name)
             assert val > 0, f"{name} must be positive"
 
-
 # dataclass for DSH, DSC
 @dataclass
 class SystemParams_DSH_DSC(BaseParams_DSH):
@@ -85,9 +84,6 @@ class SystemParams_DSH_DSC(BaseParams_DSH):
     def __post_init__(self):
         assert self.UA_total > 0, "UA_total must be positive"
         
-
-    
-
 # dataclass for, DSH, Charge
 @dataclass
 class SystemParams_DSH_charge(Params_Geometry_charge):
@@ -108,8 +104,6 @@ class SystemParams_DSH_charge(Params_Geometry_charge):
     @property
     def UA_eva(self):
         return self.UA_eva_elem * self.N_eva
-    
-
 
 # dataclass for mdot, DSH, Charge
 @dataclass

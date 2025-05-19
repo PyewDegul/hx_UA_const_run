@@ -8,7 +8,7 @@ class Compressor:
         self.DSH = target
 
     def process(self, P_eva: float, P_cond:float) -> tuple[float, float]:
-        # Initialize the simulation cycle(압축기는 inlet은 기체! Coolprop 헷갈리지 않게 하기)
+        # Initialize the simulation cycle(압축기는 inlet은 기체! Coolprop backend가 헷갈리지 않게 하기)
         self.sim.specify_phase('G')
         
         # 압축기 입구 온도 및 DSH 계산산
@@ -24,6 +24,7 @@ class Compressor:
         h_comp_out = h_comp_in + (h_comp_out_iso - h_comp_in) / self.p.isen_eff
         s_comp_out, T_comp_out = self.sim.get_multiple('HP_inputs', h_comp_out, P_cond, ('S', 'T'))
 
+        # phase 설정 해제
         self.sim.specify_phase('None')
 
         return h_comp_out, s_comp_out, T_comp_out, mdot

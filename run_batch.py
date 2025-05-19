@@ -6,137 +6,162 @@ from itertools import product
 from hx_UA_const.cycle.cycle_model import CycleModel, CycleModel_charge ,CycleModel_mdot_charge
 from hx_UA_const.core.params import SystemParams_DSH_DSC, SystemParams_DSH_charge, SystemParams_mdot_DSH_charge  # 예시
 from dataclasses import asdict
+from functools import partial
+from time import time
 
-x1_N = 100
-x2_N = 100
+class BatchRunner:
+    def __init__(self,
+                 x1_vals: np.ndarray, x2_vals: np.ndarray,
+                 backend: str, fluid: str,
+                 base_kwargs_map : dict[str, dict] | None = None,
+                 res_dir: str = None):
+        self.x1_vals = x1_vals
+        self.x2_vals = x2_vals
+        self.backend = backend
+        self.fluid = fluid
+        self.base_kwargs_map = base_kwargs_map
 
-'''1. DSH, DSC to Pressure Solver(2-loop)'''
-# 1) 파라미터 범위
-DSH_vals = np.linspace(1, 10, x1_N)
-DSC_vals = np.linspace(1, 10, x2_N) 
+        # 결과 디렉토리
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.res_dir = res_dir or os.path.join(script_dir, "results")
+        os.makedirs(self.res_dir, exist_ok=True)
 
-# 2) 결과 수집
-records = []
-for dsh, dsc in product(DSH_vals, DSC_vals):
-    params = SystemParams_DSH_DSC(
-        # Cond, Evap UA, N 개별 설정
-        UA_total=1000, N_cond=200, N_eva=50,
-        # 이차 유체 물성 설정
-        T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-        # 압축기 작동 설정
-        isen_eff = 0.9, V_comp =2e-5, f_comp=50,
-        # DSH, DSC 설정
-        CA = None, DSH_target=dsh, DSC_target=dsc,
-        # solver tol 설정
-        tol=0.01
-    )
-    try:
-        model = CycleModel(params, backend="BICUBIC&HEOS", fluid="R32")
-        res = model.calculate()  # dataclass 인스턴스
-        res_dict = asdict(res)
-    except ValueError:
-        res_dict  = {}
-    record = {"DSH[K]": dsh, "DSC[K]": dsc}
-    record.update(res_dict)  # 결과 추가
-    records.append(record)
+    # 아직 batch의 rec을 csv로 저장하는 것까지 있음
+    # 데이터 분석 및 특정 히트맵 찾기 / 최적 모델 plot은 없음
+    def _run_sweep(self,
+                   param_cls,
+                   model_cls,
+                   sweep_axes: dict[str, np.ndarray],
+                   base_kwargs: dict,
+                   filename: str):
+        """
+        param_cls   : SystemParams_* 클래스
+        model_cls   : CycleModel_* 클래스
+        sweep_axes  : {'DSH': array1, 'DSC': array2} 같은 모양
+        base_kwargs : sweep 축 외 공통 파라미터 (dict)
+        filename    : 결과 CSV 파일명
+        """
+        # 매번 깨끗한 리스트로 시작
+        records: list[dict] = []
 
-# 3) 저장할 디렉터리와 파일명 정의
-script_dir = os.path.dirname(os.path.abspath(__file__))
-res_dir = os.path.join(script_dir, "results")
-os.makedirs(res_dir, exist_ok=True)               # 폴더 없으면 생성
-res_filename = os.path.join(res_dir, f"{model.backend}_{model.fluid}_N1_N2_{x1_N}&{x2_N}_DSH_DSC.csv")
+        axis_names = list(sweep_axes.keys())
+        axis_vals  = list(sweep_axes.values())
 
-# 4) DataFrame 변환 및 저장
-df = pd.DataFrame(records) 
-df.to_csv(res_filename, index=False)
-print("배치 완료, 결과: DSH_DSC_table")
+        for vals in product(*axis_vals):
+            # ex) {'DSH': 3.2, 'DSC': 5.8}
+            sweep_kwargs = dict(zip(axis_names, vals))
+            # param 생성 (기본 파라미터 + sweep 축 파라미터)
+            params = param_cls(**base_kwargs, **sweep_kwargs)
 
-'''2. DSH, Charge to Pressure Solver(2-loop)'''
+            # 모델 생성
+            try:
+                model = model_cls(params,
+                              backend=self.backend,
+                              fluid=self.fluid)
+                result = model.calculate()
+                rec = {**sweep_kwargs, **asdict(result)}
+            except ValueError:
+                # 실패한 케이스도 축 값은 남겨둠
+                rec = {**sweep_kwargs}
+            records.append(rec)
 
-# 1) 파라미터 범위
-DSH_vals = np.linspace(1, 10, x1_N)
-charge_vals = np.linspace(0.1, 1, x2_N)
+        # DataFrame → CSV
+        df = pd.DataFrame(records)
+        out_path = os.path.join(self.res_dir, filename)
+        df.to_csv(out_path, index=False)
+        print(f"완료: {filename}  ({len(records)} cases)")
 
-# 2) 결과 수집
-records = []
-for dsh, charge_val in product(DSH_vals, charge_vals):
-    params = SystemParams_DSH_charge(
-        # Cond, Evap U, N 개별 설정
-        U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-        # Cond, Evap, Conn 기하 형상 설정
-        D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5,
-        # 이차 유체 물성 설정
-        T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-        # 압축기 작동 설정
-        isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
-        # DSH, charge 설정
-        CA = None, DSH_target=dsh, charge_target=charge_val, 
-        # solver tol 설정
-        tol=0.01
+    def run_DSH_DSC(self):
+        # 1) DSH vs DSC
+        self._run_sweep(
+            param_cls   = SystemParams_DSH_DSC,
+            model_cls   = CycleModel,
+            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["DSH_DSC"],
+            filename    = f"{self.backend}_{self.fluid}_{SystemParams_DSH_DSC.__name__}.csv"
         )
-    try:
-        model = CycleModel_charge(params, backend="BICUBIC&HEOS", fluid="R32")
-        res = model.calculate()  # dataclass 인스턴스
-        res_dict = asdict(res)
-    except ValueError:
-        res_dict  = {}
-    record = {"DSH[K]": dsh, "charge[kg]": charge_val}
-    record.update(res_dict)  # 결과 추가
-    records.append(record)
+        
+    def run_DSH_charge(self):
+        # 2) DSH vs Charge
+        self._run_sweep(
+            param_cls   = SystemParams_DSH_charge,
+            model_cls   = CycleModel_charge,
+            sweep_axes  = {'DSH_target': self.x1_vals, 'charge_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["DSH_charge"],
+            filename    = f"{self.backend}_{self.fluid}_{SystemParams_DSH_charge.__name__}.csv"
+        )
 
-# 3) 저장할 디렉터리와 파일명 정의
-script_dir = os.path.dirname(os.path.abspath(__file__))
-res_dir = os.path.join(script_dir, "results")
-os.makedirs(res_dir, exist_ok=True)               # 폴더 없으면 생성
-res_filename = os.path.join(res_dir, f"{model.backend}_{model.fluid}_N1_N2_{x1_N}&{x2_N}_DSH_charge.csv")
+    def run_mdot_charge(self):
+        # 3) CA vs Charge
+        self._run_sweep(
+            param_cls   = SystemParams_mdot_DSH_charge,
+            model_cls   = CycleModel_mdot_charge,
+            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["mdot_charge"],
+            filename    = f"{self.backend}_{self.fluid}_{SystemParams_mdot_DSH_charge.__name__}.csv"
+        )
 
-# 4) DataFrame 변환 및 저장
-df = pd.DataFrame(records) 
-df.to_csv(res_filename, index=False)
-print("배치 완료, 결과: DSH_charge_table")
-
-
-'''3. mdot, DSH, Charge to Pressure Solver(3-loop) // CA, m_charge'''
-# 1) 파라미터 범위
-CA_vals = np.linspace(1e-8, 1e-5, x1_N)  # 예시로 추가한 CA 범위
-charge_vals = np.linspace(0.1, 0.5, x2_N)  # 예시로 추가한 charge 범위
-
-# 2) 결과 수집
-records = []
-for CA_val, charge_val in product(CA_vals, charge_vals):
-    params = SystemParams_mdot_DSH_charge(
-        # Cond, Evap U, N 개별 설정
-        U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
-        # Cond, Evap, Conn 기하 형상 설정
-        D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5,
-        # 이차 유체 물성 설정
-        T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
-        # 압축기 작동 설정
-        isen_eff = 0.7, V_comp =2e-5, f_comp=50,
-        # CA(mdot) 개도, charge 설정
-        CA = CA_val, # CA 값은 linspace를 통해 구간 설정
-        DSH_target=0.0,  # DSH_target을 0으로 설정(dummy)
-        charge_target=charge_val,  # charge 값은 linspace를 통해 구간 설정
-        # solver tol 설정
-        tol = 0.01
+if __name__ == "__main__":
+    '''x1, x2 축의 개수'''
+    x1_N = 20
+    x2_N = 20
+    '''기본 parameter'''
+    # DSH_DSC
+    base_kwarg_1 = {
+                "UA_total":1000, "N_cond":200, "N_eva":50,
+                "T_cond_air":35+273.15, "T_eva_air":27+273.15,
+                "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
+                "CA":None, "tol":0.01
+    }
+    # DSH_charge
+    base_kwarg_2 = dict(
+                U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+                D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5,
+                T_cond_air=35+273.15, T_eva_air=27+273.15,
+                isen_eff=0.7, V_comp=2e-5, f_comp=50,
+                CA=None, tol=0.01
     )
-    try:
-        model = CycleModel_mdot_charge(params, backend="BICUBIC&HEOS", fluid="R32")
-        res = model.calculate()  # dataclass 인스턴스
-        res_dict = asdict(res)
-    except ValueError:
-        res_dict  = {}
-    record = {"CA[m^2]": CA_val, "charge[kg]": charge_val}
-    record.update(res_dict)  # 결과 추가
-    records.append(record)
+    # CA_charge
+    base_kwarg_3 = dict(
+                U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
+                D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5,
+                T_cond_air=35+273.15, T_eva_air=27+273.15,
+                isen_eff=0.7, V_comp=2e-5, f_comp=50,
+                DSH_target=0.0, tol=0.01
+    )
+    
+    '''2 loop - DSH/DSC'''
+    run_batch = BatchRunner(
+        x1_vals = np.linspace(1, 10, x1_N),
+        x2_vals = np.linspace(1, 10, x2_N),
+        base_kwargs_map = {"DSH_DSC": base_kwarg_1, 
+                           "DSH_charge": {}, 
+                           "mdot_charge": {}},
+        backend = "BICUBIC&HEOS",
+        fluid   = "R32"
+    )
+    # run_batch.run_DSH_DSC()
+    
+    '''2 loop - DSH/Charge'''
+    run_batch = BatchRunner(
+        x1_vals = np.linspace(1, 10, x1_N),
+        x2_vals = np.linspace(0.1, 1, x2_N),
+        base_kwargs_map = {"DSH_DSC": {}, 
+                           "DSH_charge": base_kwarg_2, 
+                           "mdot_charge": {}},
+        backend = "BICUBIC&HEOS",
+        fluid   = "R32"
+    )
+    # run_batch.run_DSH_charge()
 
-# 3) 저장할 디렉터리와 파일명 정의
-script_dir = os.path.dirname(os.path.abspath(__file__))
-res_dir = os.path.join(script_dir, "results")
-os.makedirs(res_dir, exist_ok=True)               # 폴더 없으면 생성
-res_filename = os.path.join(res_dir, f"{model.backend}_{model.fluid}_N1_N2_{x1_N}&{x2_N}_CA_charge_table.csv")
-
-# 4) DataFrame 변환 및 저장
-df = pd.DataFrame(records) 
-df.to_csv(res_filename, index=False)
-print("배치 완료, 결과: CA_charge_table")  
+    '''3 loop - CA/Charge'''
+    run_batch = BatchRunner(
+        x1_vals = np.linspace(8e-7, 1e-6, x1_N),
+        x2_vals = np.linspace(0.2, 0.5, x2_N),
+        base_kwargs_map = {"DSH_DSC": {}, 
+                           "DSH_charge": {}, 
+                           "mdot_charge": base_kwarg_3},
+        backend = "BICUBIC&HEOS",
+        fluid   = "R32"
+    )
+    # run_batch.run_mdot_charge()

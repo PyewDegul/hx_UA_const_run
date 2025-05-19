@@ -21,6 +21,7 @@ class Cycle_model_res:
     mdot : float
     DSH : float
     DSC : float
+'''1. DSH, DSC to Pressure Solver(2-loop)'''
 
 class CycleModel:
     def __init__(self, params: SystemParams_DSH_DSC, backend: str, fluid: str):
@@ -97,7 +98,7 @@ class CycleModel_charge:
         DSH = self.params.DSH_target
         # DSC는 직접 계산 必要
         T_cond_liq = self.sim.get_single('PQ_inputs', self.res.P_cond_sol, 0, 'T')
-        DSC = self.res.T_cond_elem[-1] - T_cond_liq
+        DSC = abs(self.res.T_cond_elem[-1] - T_cond_liq)
         return Cycle_model_res(
             P_cond=P_cond,
             P_eva=P_eva,
@@ -149,7 +150,7 @@ class CycleModel_mdot_charge:
         DSH = self.res.DSH_sol
         # DSC는 직접 계산 必要
         T_cond_liq = self.sim.get_single('PQ_inputs', self.res.P_cond_sol, 0, 'T')
-        DSC = T_cond_liq - self.res.T_cond_elem[-1]      
+        DSC = abs(T_cond_liq - self.res.T_cond_elem[-1])      
         return Cycle_model_res(
             P_cond=P_cond,
             P_eva=P_eva,
