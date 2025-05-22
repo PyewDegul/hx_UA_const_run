@@ -111,7 +111,7 @@ class CycleModel_charge:
         W_comp = self.res.mdot * (self.res.h_comp_out - self.sim.get_single('PT_inputs', self.res.P_eva_sol, T_eva_vap + self.params.DSH_target, 'H'))
         COP_H = Q_cond / W_comp
         COP_R = Q_eva / W_comp
-        mtot = self.res.mdot
+        mtot = self.res.mtot
         mdot = self.res.mdot
         DSH = self.params.DSH_target
         # DSC는 직접 계산 必要 (Q>0의 경우)
@@ -166,7 +166,7 @@ class CycleModel_mdot_charge:
         W_comp = self.res.mdot * (self.res.h_comp_out - self.sim.get_single('PT_inputs', self.res.P_eva_sol, T_eva_vap + self.res.DSH_sol, 'H'))
         COP_H = Q_cond / W_comp
         COP_R = Q_eva / W_comp
-        mtot = self.res.mdot
+        mtot = self.res.mtot
         mdot = self.res.mdot
         # DSH_target 변동 -> self.res의 DSH_sol로 계산 必要
         DSH = self.res.DSH_sol

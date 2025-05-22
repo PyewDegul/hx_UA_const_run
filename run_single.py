@@ -70,7 +70,7 @@ if __name__ == "__main__":
                 "UA_total":1000, "N_cond":200, "N_eva":50,
                 "T_cond_air":35+273.15, "T_eva_air":27+273.15,
                 "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
-                "DSH_target":5, "DSC_target":5,
+                "DSH_target":2.2010458803296644, "DSC_target":4.6767041168000265,
                 "CA":None, "tol":0.01
     }
     base_kwargs_2 = dict(
@@ -98,11 +98,11 @@ if __name__ == "__main__":
 
     # Run the models
     model1, rec1 = runner.run_DSH_DSC()
-    model2, rec2 = runner.run_DSH_charge()
-    model3, rec3 = runner.run_mdot_charge()
+    # model2, rec2 = runner.run_DSH_charge()
+    # model3, rec3 = runner.run_mdot_charge()
     print(rec1)
-    print(rec2)
-    print(rec3)
+    # print(rec2)
+    # print(rec3)
     '''    
     # Plot the model results
     model1.plot()

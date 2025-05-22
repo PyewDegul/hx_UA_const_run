@@ -1,19 +1,16 @@
 # batch_run.py
 import os
 import numpy as np
+import torch
 import pandas as pd
+import matplotlib.pyplot as plt
 from itertools import product
 from hx_UA_const.cycle.cycle_model import CycleModel, CycleModel_charge ,CycleModel_mdot_charge
 from hx_UA_const.core.params import SystemParams_DSH_DSC, SystemParams_DSH_charge, SystemParams_mdot_DSH_charge  # 예시
 
 from time import time
-
-class BatchRunner:
-    def __init__(self,
-                 sweeps,
-                 backend: str, fluid: str,
-                 res_dir: str = None):
-        
+class BaseBatch:
+    def __init__(self, sweeps, backend, fluid, res_dir = None):
         self.x1_vals = sweeps["x1_vals"]
         self.x2_vals = sweeps["x2_vals"]
         self.base_kwargs_map = sweeps["base_kwargs_map"] or {
@@ -24,11 +21,14 @@ class BatchRunner:
         self.backend = backend
         self.fluid = fluid
 
-        # 결과 디렉토리
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.res_dir = res_dir or os.path.join(script_dir, "results")
         os.makedirs(self.res_dir, exist_ok=True)
 
+class BatchRunner(BaseBatch):
+    def __init__(self, sweeps, backend, fluid, res_dir=None):
+        # 1) 부모 클래스 초기화 (sweeps, backend, fluid, res_dir 세팅)
+        super().__init__(sweeps, backend, fluid, res_dir)
     # 아직 batch의 rec을 csv로 저장하는 것까지 있음
     # 데이터 분석 및 특정 히트맵 찾기 / 최적 모델 plot은 없음
     def _run_sweep(self,
@@ -105,6 +105,117 @@ class BatchRunner:
             filename    = f"{self.backend}_{self.fluid}_{SystemParams_mdot_DSH_charge.__name__}.csv"
         )
 
+from ax.api.client import Client
+from ax.api.configs import RangeParameterConfig
+
+class BatchRunnerBO(BaseBatch):
+    def __init__(self, sweeps, backend, fluid, res_dir=None):
+        # 1) 부모 클래스 초기화 (sweeps, backend, fluid, res_dir 세팅)
+        super().__init__(sweeps, backend, fluid, res_dir)
+        # placeholders for experiment and surrogate
+        self.exp = None
+        self.model_bridge = None
+
+    def _eval_ax(self, params_dict, params_cls, model_cls, base_kwargs):
+        # Ax passes floats; build argument list
+        axis_names = list(params_dict.keys())
+        sweep_kwargs = {name: params_dict[name] for name in axis_names}
+        try:
+            params = params_cls(**base_kwargs, **sweep_kwargs)
+            model = model_cls(params, backend=self.backend, fluid=self.fluid)
+            obj = model.calculate().COP_H
+            # Ax expects (mean, SEM)
+            return {"COP": (obj, 0.0), "valid": (0.0, 0.0)}
+        except Exception:
+            # Infeasible: COP irrelevant, mark valid=1
+            return {"COP": (-1e6, 0.0), "valid": (1.0, 0.0)}
+        
+    def _optimize_bo(self,
+                       params_cls,
+                       model_cls,
+                       sweep_axes,
+                       base_kwargs,
+                       total_trials = 30,
+    ):
+        # 1. Build Ax parameter
+        client = Client()
+        # Search space(x_vec)의 범위 설정
+        parameters = [
+            RangeParameterConfig(
+                name=name,
+                parameter_type="float",
+                bounds=(float(vals.min()), float(vals.max()))
+            )
+            for name, vals in sweep_axes.items()
+        ]
+        client.configure_experiment(parameters=parameters)
+        # 최적화 함수의 설정
+        metric_name = "COP" # this name is used during the optimization loop in Step 5
+        objective = f"{metric_name}" # minimization is specified by the negative sign
+        client.configure_optimization(objective=objective,
+                                       
+                                       )
+
+        # 제약 조건의 추가(추후 실행)(valid)
+        max_progress = 100
+        for _ in range(total_trials): # Run 10 rounds of trials
+            # We will request three trials at a time in this example
+            trials = client.get_next_trials(max_trials=3)
+            for trial_index, param_dict in trials.items():
+                result_metrics = self._eval_ax(
+                        params_dict=param_dict,
+                        params_cls=params_cls,
+                        model_cls=model_cls,
+                        base_kwargs=base_kwargs,
+                )
+                # result_metrics 예: {"COP": (123.4, 0.0), "valid": (0.0, 0.0)}
+                # Right now, we only have one metric, "COP"
+                raw_data = {"COP" : result_metrics["COP"][0]}
+                client.complete_trial(trial_index=trial_index, raw_data=raw_data)
+                best_params, best_metric, best_trial, best_name = client.get_best_parameterization(use_model_predictions = True)
+                print(f"Completed trial {trial_index} → best_trial={best_trial} best_params={best_params}, best_metric={best_metric}")
+        
+        # 1) store for plotting
+        # self.exp 
+        # generation_strategy 내부에 modelbridge가 들어있습니다
+        # self.model_bridge 
+
+        # 2) save full history
+        
+        # 3) retrieve best
+        best_params, best_metric, best_trial, best_name = client.get_best_parameterization(use_model_predictions = True)                # {'DSH_target': ..., 'DSC_target': ...}
+        print(f"Best params: {best_params}")
+        print(f"Best COP_mu/sem: {best_metric}")
+        print(f"Best name: {best_name}")
+        print(f"Best trial: {best_trial}")
+        
+    def run_DSH_DSC_bo(self):
+        # 1) DSH vs DSC
+        self._optimize_bo(
+            params_cls   = SystemParams_DSH_DSC,
+            model_cls   = CycleModel,
+            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["DSH_DSC"],
+        )
+        
+    def run_DSH_charge_bo(self):
+        # 2) DSH vs Charge
+        self._optimize_bo(
+            params_cls   = SystemParams_DSH_charge,
+            model_cls   = CycleModel_charge,
+            sweep_axes  = {'DSH_target': self.x1_vals, 'charge_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["DSH_charge"],
+        )
+
+    def run_mdot_charge_bo(self):
+        # 3) CA vs Charge
+        self._optimize_bo(
+            params_cls   = SystemParams_mdot_DSH_charge,
+            model_cls   = CycleModel_mdot_charge,
+            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals},
+            base_kwargs = self.base_kwargs_map["mdot_charge"],
+        )
+
 if __name__ == "__main__":
     '''x1, x2 축의 개수'''
     x1_N = 20
@@ -171,20 +282,25 @@ if __name__ == "__main__":
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    run_batch.run_DSH_DSC()
+    # run_batch.run_DSH_DSC()
+
+    run_batch_BO = BatchRunnerBO(
+        sweeps_1,
+        backend = "BICUBIC&HEOS",
+        fluid   = "R32"
+    )
+    run_batch_BO.run_DSH_DSC_bo()
     
-    '''2 loop - DSH/Charge'''
-    run_batch = BatchRunner(
+    run_batch_charge_BO = BatchRunnerBO(
         sweeps_2,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    run_batch.run_DSH_charge()
+    # run_batch_charge_BO.run_DSH_charge_bo()
 
-    '''3 loop - CA/Charge'''
-    run_batch = BatchRunner(
+    run_batch_mdot_charge_BO = BatchRunnerBO(
         sweeps_3,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    run_batch.run_mdot_charge()
+    # run_batch_mdot_charge_BO.run_mdot_charge_bo()
