@@ -61,7 +61,7 @@ class CycleModel:
         W_comp = self.res.mdot * (self.res.h_comp_out - self.sim.get_single('PT_inputs', self.res.P_eva_sol, T_eva_vap + self.params.DSH_target, 'H'))
         COP_H = Q_cond / W_comp
         COP_R = Q_eva / W_comp
-        mtot = self.res.mdot
+        mtot = -999999
         mdot = self.res.mdot
         DSH = self.params.DSH_target
         DSC = self.params.DSC_target

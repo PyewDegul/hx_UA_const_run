@@ -27,8 +27,8 @@ class SingleRunner:
         
         try:
             model = model_cls(params,
-                        backend=self.backend,
-                        fluid=self.fluid)
+                            backend=self.backend,
+                            fluid=self.fluid)
             result = model.calculate()
             rec = result.to_dict(key_with_unit = True)
             return model, rec
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                 "UA_total":1000, "N_cond":200, "N_eva":50,
                 "T_cond_air":35+273.15, "T_eva_air":27+273.15,
                 "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
-                "DSH_target":2.2010458803296644, "DSC_target":4.6767041168000265,
+                "DSH_target":5, "DSC_target":5,
                 "CA":None, "tol":0.01
     }
     base_kwargs_2 = dict(
@@ -79,7 +79,7 @@ if __name__ == "__main__":
             T_cond_air=35 + 273.15, T_eva_air=27+ 273.15,
             isen_eff = 0.7, V_comp =2e-5, f_comp=50, 
             CA = None,
-            DSH_target=5, charge_target=0.4, tol=0.01
+            DSH_target=5, charge_target=0.45, tol=0.01
         )
     base_kwargs_3 = dict(
             U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
@@ -93,16 +93,16 @@ if __name__ == "__main__":
     runner = SingleRunner(base_kwargs_map = {"DSH_DSC": base_kwargs_1, 
                            "DSH_charge": base_kwargs_2, 
                            "mdot_charge": base_kwargs_3},
-                           backend = "BICUBIC&HEOS", 
+                           backend = "REFPROP", 
                            fluid = "R32")
 
     # Run the models
     model1, rec1 = runner.run_DSH_DSC()
-    # model2, rec2 = runner.run_DSH_charge()
-    # model3, rec3 = runner.run_mdot_charge()
+    model2, rec2 = runner.run_DSH_charge()
+    model3, rec3 = runner.run_mdot_charge()
     print(rec1)
-    # print(rec2)
-    # print(rec3)
+    print(rec2)
+    print(rec3)
     '''    
     # Plot the model results
     model1.plot()

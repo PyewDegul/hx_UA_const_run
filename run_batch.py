@@ -44,12 +44,13 @@ class BatchRunner(BaseBatch):
         base_kwargs : sweep 축 외 공통 파라미터 (dict)
         filename    : 결과 CSV 파일명
         """
+        start_time = time()
         # 매번 깨끗한 리스트로 시작
         records: list[dict] = []
 
         axis_names = list(sweep_axes.keys())
         axis_vals  = list(sweep_axes.values())
-
+        
         for vals in product(*axis_vals):
             # ex) {'DSH': 3.2, 'DSC': 5.8}
             sweep_kwargs = dict(zip(axis_names, vals))
@@ -68,7 +69,10 @@ class BatchRunner(BaseBatch):
                 # 실패한 케이스도 축 값은 남겨둠
                 rec = {**sweep_kwargs}
             records.append(rec)
-
+        end_time = time()
+        hr, min = divmod(end_time - start_time, 3600)
+        min, sec = divmod(min, 60)
+        print(f"소요시간: {int(hr)}:{int(min)}:{int(sec)}")
         # DataFrame → CSV
         df = pd.DataFrame(records)
         out_path = os.path.join(self.res_dir, filename)
@@ -151,13 +155,10 @@ class BatchRunnerBO(BaseBatch):
         client.configure_experiment(parameters=parameters)
         # 최적화 함수의 설정
         metric_name = "COP" # this name is used during the optimization loop in Step 5
-        objective = f"{metric_name}" # minimization is specified by the negative sign
+        objective = f"{metric_name}" # maximization is specified by the negative sign
         client.configure_optimization(objective=objective,
-                                       
-                                       )
-
-        # 제약 조건의 추가(추후 실행)(valid)
-        max_progress = 100
+                                    )
+        # Auto stop 방법 찾기(상대 오차 등)
         for _ in range(total_trials): # Run 10 rounds of trials
             # We will request three trials at a time in this example
             trials = client.get_next_trials(max_trials=3)
@@ -169,11 +170,13 @@ class BatchRunnerBO(BaseBatch):
                         base_kwargs=base_kwargs,
                 )
                 # result_metrics 예: {"COP": (123.4, 0.0), "valid": (0.0, 0.0)}
-                # Right now, we only have one metric, "COP"
-                raw_data = {"COP" : result_metrics["COP"][0]}
+                # maxmize COP_mu + val * (1e-6 - COP_mu)
+                # if valid, val = 0.0, COP_mu
+                # if invalid, val = 1.0, 1e-6(수치안정을 위해)
+                raw_data = {"COP" : result_metrics["COP"][0] + (1e-6 - result_metrics["COP"][0]) * result_metrics["valid"][0]}
                 client.complete_trial(trial_index=trial_index, raw_data=raw_data)
                 best_params, best_metric, best_trial, best_name = client.get_best_parameterization(use_model_predictions = True)
-                print(f"Completed trial {trial_index} → best_trial={best_trial} best_params={best_params}, best_metric={best_metric}")
+                print(f"Completed trial {trial_index} → best_trial={best_trial} best_params={best_params}, best_metric={best_metric["COP"][0]}")
         
         # 1) store for plotting
         # self.exp 
@@ -181,11 +184,10 @@ class BatchRunnerBO(BaseBatch):
         # self.model_bridge 
 
         # 2) save full history
-        
         # 3) retrieve best
         best_params, best_metric, best_trial, best_name = client.get_best_parameterization(use_model_predictions = True)                # {'DSH_target': ..., 'DSC_target': ...}
         print(f"Best params: {best_params}")
-        print(f"Best COP_mu/sem: {best_metric}")
+        print(f"Best COP_mu/sem: {best_metric["COP"][0]} / {best_metric["COP"][1]}")
         print(f"Best name: {best_name}")
         print(f"Best trial: {best_trial}")
         
@@ -277,19 +279,34 @@ if __name__ == "__main__":
 
 
     '''2 loop - DSH/DSC'''
-    run_batch = BatchRunner(
+    run_batch1 = BatchRunner(
         sweeps_1,
-        backend = "BICUBIC&HEOS",
+        backend = "REFPROP",
         fluid   = "R32"
     )
-    # run_batch.run_DSH_DSC()
+    run_batch1.run_DSH_DSC()
+    
+    '''2 loop - DSH/charge'''
+    run_batch2 = BatchRunner(
+        sweeps_2,
+        backend = "REFPROP",
+        fluid   = "R32"
+    )
+    # run_batch2.run_DSH_charge()
+    '''3 loop - mdot/charge'''
+    run_batch3 = BatchRunner(
+        sweeps_3,
+        backend = "REFPROP",
+        fluid   = "R32"
+    )
+    # run_batch3.run_mdot_charge()
 
     run_batch_BO = BatchRunnerBO(
         sweeps_1,
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    run_batch_BO.run_DSH_DSC_bo()
+    # run_batch_BO.run_DSH_DSC_bo()
     
     run_batch_charge_BO = BatchRunnerBO(
         sweeps_2,
