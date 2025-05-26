@@ -13,6 +13,7 @@ class BaseBatch:
     def __init__(self, sweeps, backend, fluid, res_dir = None):
         self.x1_vals = sweeps["x1_vals"]
         self.x2_vals = sweeps["x2_vals"]
+        self.x3_vals = sweeps["x3_vals"] if "x3_vals" in sweeps else None
         self.base_kwargs_map = sweeps["base_kwargs_map"] or {
             "DSH_DSC": {},
             "DSH_charge": {},
@@ -104,7 +105,7 @@ class BatchRunner(BaseBatch):
         self._run_sweep(
             param_cls   = SystemParams_mdot_DSH_charge,
             model_cls   = CycleModel_mdot_charge,
-            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals},
+            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals, 'f_comp' : self.x3_vals},
             base_kwargs = self.base_kwargs_map["mdot_charge"],
             filename    = f"{self.backend}_{self.fluid}_{SystemParams_mdot_DSH_charge.__name__}.csv"
         )
@@ -214,7 +215,7 @@ class BatchRunnerBO(BaseBatch):
         self._optimize_bo(
             params_cls   = SystemParams_mdot_DSH_charge,
             model_cls   = CycleModel_mdot_charge,
-            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals},
+            sweep_axes  = {'CA': self.x1_vals, 'charge_target': self.x2_vals, 'f_comp' : self.x3_vals},
             base_kwargs = self.base_kwargs_map["mdot_charge"],
         )
 
@@ -222,6 +223,7 @@ if __name__ == "__main__":
     '''x1, x2 축의 개수'''
     x1_N = 20
     x2_N = 20
+    x3_N = 25
     '''기본 parameter'''
     # DSH_DSC
     base_kwarg_1 = dict(
@@ -243,7 +245,7 @@ if __name__ == "__main__":
                 U_cond=1000, U_eva=1000, N_cond=200, N_eva=50,
                 D_cond=8e-3, L_cond=30, D_eva=6e-3, L_eva=30, L_connect=5,
                 T_cond_air=35+273.15, T_eva_air=27+273.15,
-                isen_eff=0.7, V_comp=2e-5, f_comp=50,
+                isen_eff=0.7, V_comp=2e-5,
                 DSH_target=0.0, tol=0.01
     )
     # DSH_DSC
@@ -268,8 +270,9 @@ if __name__ == "__main__":
     }
     # CA_charge
     sweeps_3 = {
-        "x1_vals": np.linspace(8e-7, 1e-6, x1_N),
+        "x1_vals": np.linspace(1e-7, 1e-3, x1_N),
         "x2_vals": np.linspace(0.2, 0.5, x2_N),
+        "x3_vals": np.linspace(25, 75, x3_N),
         "base_kwargs_map": {
             "DSH_DSC": {},
             "DSH_charge": {},
@@ -284,7 +287,7 @@ if __name__ == "__main__":
         backend = "REFPROP",
         fluid   = "R32"
     )
-    run_batch1.run_DSH_DSC()
+    # run_batch1.run_DSH_DSC()
     
     '''2 loop - DSH/charge'''
     run_batch2 = BatchRunner(
@@ -293,10 +296,11 @@ if __name__ == "__main__":
         fluid   = "R32"
     )
     # run_batch2.run_DSH_charge()
-    '''3 loop - mdot/charge'''
+    
+    '''3 loop - mdot/CA/f_comp'''
     run_batch3 = BatchRunner(
         sweeps_3,
-        backend = "REFPROP",
+        backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
     # run_batch3.run_mdot_charge()
@@ -320,4 +324,4 @@ if __name__ == "__main__":
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    # run_batch_mdot_charge_BO.run_mdot_charge_bo()
+    run_batch_mdot_charge_BO.run_mdot_charge_bo()
