@@ -1,7 +1,6 @@
 # batch_run.py
 import os
 import numpy as np
-import torch
 import pandas as pd
 import matplotlib.pyplot as plt
 from itertools import product
@@ -46,6 +45,7 @@ class BatchRunner(BaseBatch):
         filename    : 결과 CSV 파일명
         """
         start_time = time()
+        last_quarter = -1
         # 매번 깨끗한 리스트로 시작
         records: list[dict] = []
 
@@ -70,6 +70,14 @@ class BatchRunner(BaseBatch):
                 # 실패한 케이스도 축 값은 남겨둠
                 rec = {**sweep_kwargs}
             records.append(rec)
+            iter_time = time() - start_time
+            quarter   = int(iter_time // 900)      # 900 s = 15 min
+            if quarter != last_quarter:
+                hr, min = divmod(iter_time, 3600)
+                min, sec = divmod(min, 60)
+                print(f"진행중: {filename} ({len(records)} cases) - {int(hr)}:{int(min)}:{int(sec)}")
+                last_quarter = quarter
+
         end_time = time()
         hr, min = divmod(end_time - start_time, 3600)
         min, sec = divmod(min, 60)
@@ -85,7 +93,7 @@ class BatchRunner(BaseBatch):
         self._run_sweep(
             param_cls   = SystemParams_DSH_DSC,
             model_cls   = CycleModel,
-            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals},
+            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals, 'f_comp' : self.x3_vals},
             base_kwargs = self.base_kwargs_map["DSH_DSC"],
             filename    = f"{self.backend}_{self.fluid}_{SystemParams_DSH_DSC.__name__}.csv"
         )
@@ -197,7 +205,7 @@ class BatchRunnerBO(BaseBatch):
         self._optimize_bo(
             params_cls   = SystemParams_DSH_DSC,
             model_cls   = CycleModel,
-            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals},
+            sweep_axes  = {'DSH_target': self.x1_vals, 'DSC_target': self.x2_vals, 'f_comp': self.x3_vals},
             base_kwargs = self.base_kwargs_map["DSH_DSC"],
         )
         
@@ -219,6 +227,10 @@ class BatchRunnerBO(BaseBatch):
             base_kwargs = self.base_kwargs_map["mdot_charge"],
         )
 
+import lightgbm as lgb
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
 if __name__ == "__main__":
     '''x1, x2 축의 개수'''
     x1_N = 20
@@ -229,7 +241,7 @@ if __name__ == "__main__":
     base_kwarg_1 = dict(
                 UA_total=1000, N_cond=200, N_eva=50,
                 T_cond_air=35+273.15, T_eva_air=27+273.15,
-                isen_eff=0.9, V_comp=2e-5, f_comp=50,
+                isen_eff=0.9, V_comp=2e-5,
                 CA = None, tol=0.01
     )
     # DSH_charge
@@ -252,6 +264,7 @@ if __name__ == "__main__":
     sweeps_1 = {
         "x1_vals": np.linspace(1, 10, x1_N),
         "x2_vals": np.linspace(1, 10, x2_N),
+        "x3_vals": np.linspace(25, 50, x3_N),
         "base_kwargs_map": {
             "DSH_DSC": base_kwarg_1,
             "DSH_charge": {},
@@ -281,13 +294,14 @@ if __name__ == "__main__":
     }
 
 
-    '''2 loop - DSH/DSC'''
+    '''3 loop - DSH/DSC/f_comp'''
     run_batch1 = BatchRunner(
         sweeps_1,
         backend = "REFPROP",
         fluid   = "R32"
     )
-    # run_batch1.run_DSH_DSC()
+    run_batch1.run_DSH_DSC()
+
     
     '''2 loop - DSH/charge'''
     run_batch2 = BatchRunner(
@@ -324,4 +338,4 @@ if __name__ == "__main__":
         backend = "BICUBIC&HEOS",
         fluid   = "R32"
     )
-    run_batch_mdot_charge_BO.run_mdot_charge_bo()
+    # run_batch_mdot_charge_BO.run_mdot_charge_bo()
