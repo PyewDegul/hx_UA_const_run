@@ -239,8 +239,8 @@ if __name__ == "__main__":
     '''기본 parameter'''
     # DSH_DSC
     base_kwarg_1 = dict(
-                UA_total=1000, N_cond=200, N_eva=50,
-                T_cond_air=35+273.15, T_eva_air=27+273.15,
+                UA_total=160, N_cond=20, N_eva=10,
+                T_cond_air = 50+273.15, T_eva_air = 40+273.15,
                 isen_eff=0.9, V_comp=2e-5,
                 CA = None, tol=0.01
     )
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     sweeps_1 = {
         "x1_vals": np.linspace(1, 10, x1_N),
         "x2_vals": np.linspace(1, 10, x2_N),
-        "x3_vals": np.linspace(25, 50, x3_N),
+        "x3_vals": np.linspace(25, 1000, x3_N),
         "base_kwargs_map": {
             "DSH_DSC": base_kwarg_1,
             "DSH_charge": {},
@@ -297,8 +297,8 @@ if __name__ == "__main__":
     '''3 loop - DSH/DSC/f_comp'''
     run_batch1 = BatchRunner(
         sweeps_1,
-        backend = "REFPROP",
-        fluid   = "R32"
+        backend = "BICUBIC&HEOS",
+        fluid   = "R410a"
     )
     run_batch1.run_DSH_DSC()
 

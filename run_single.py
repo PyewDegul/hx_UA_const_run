@@ -67,8 +67,8 @@ class SingleRunner:
 if __name__ == "__main__":
     # Example usage
     base_kwargs_1 = {
-                "UA_total":1000, "N_cond":200, "N_eva":50,
-                "T_cond_air":35+273.15, "T_eva_air":27+273.15,
+                "UA_total":8000, "N_cond":20, "N_eva":10,
+                "T_cond_air":45+273.15, "T_eva_air":40+273.15,
                 "isen_eff":0.9, "V_comp":2e-5, "f_comp":50,
                 "DSH_target":5, "DSC_target":5,
                 "CA":None, "tol":0.01
@@ -94,15 +94,15 @@ if __name__ == "__main__":
                            "DSH_charge": base_kwargs_2, 
                            "mdot_charge": base_kwargs_3},
                            backend = "REFPROP", 
-                           fluid = "R32")
+                           fluid = "R410a")
 
     # Run the models
     model1, rec1 = runner.run_DSH_DSC()
-    model2, rec2 = runner.run_DSH_charge()
-    model3, rec3 = runner.run_mdot_charge()
+    # model2, rec2 = runner.run_DSH_charge()
+    # model3, rec3 = runner.run_mdot_charge()
     print(rec1)
-    print(rec2)
-    print(rec3)
+    # print(rec2)
+    # print(rec3)
     '''    
     # Plot the model results
     model1.plot()
